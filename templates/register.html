@@ -1,0 +1,22 @@
+{{define "register.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:400px;">
+  <h2>Create an account</h2>
+  {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  <form method="post" action="/register">
+    <label>Full name</label>
+    <input type="text" name="name" required>
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Phone</label>
+    <input type="text" name="phone">
+    <label>Password</label>
+    <input type="password" name="password" required minlength="6">
+    <button type="submit">Register</button>
+  </form>
+  <p class="muted">Already have an account? <a href="/login">Log in</a></p>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

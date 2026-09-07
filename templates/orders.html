@@ -1,0 +1,17 @@
+{{define "orders.html"}}
+{{template "layout_top" .}}
+
+<h2>My orders</h2>
+{{if not .Orders}}<p class="muted">No orders yet.</p>{{end}}
+{{range .Orders}}
+<div class="card" style="margin-bottom:16px;">
+  <div class="muted">{{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Status: <strong>{{.Status}}</strong></div>
+  <ul>
+    {{range .Items}}<li>{{.Title}} &times; {{.Quantity}} — {{naira .PriceKobo}} each</li>{{end}}
+  </ul>
+  <strong>Total: {{naira .TotalKobo}}</strong>
+</div>
+{{end}}
+
+{{template "layout_bottom" .}}
+{{end}}

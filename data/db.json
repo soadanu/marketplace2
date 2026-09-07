@@ -1,0 +1,74 @@
+{
+  "users": {
+    "2e3177c399d5e22f9976f4157d8d834d": {
+      "id": "2e3177c399d5e22f9976f4157d8d834d",
+      "name": "Admin",
+      "email": "admin@kaya.local",
+      "password_hash": "4a49b24f719206e910b0596750c97fdb$9f9d85b03fa6c9c57900bf193ff85f85141d40cc7db8a4044063fab27f60b77f",
+      "phone": "",
+      "role": "admin",
+      "seller_status": "",
+      "created_at": "0001-01-01T00:00:00Z"
+    },
+    "3bf5ff974bd5a8514890f667cfaba5e8": {
+      "id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "name": "SOLOMON OYIHOMA ADANU",
+      "email": "solomonadanu16@gmail.com",
+      "password_hash": "b93a5fad4e6a4950004eb95015fc5232$ef30ee7fa5f1f3244529294ea848d8a5078955501cfe0ebfceac6163af09eff2",
+      "phone": "08032688861",
+      "role": "buyer",
+      "seller_status": "pending",
+      "created_at": "2026-09-07T11:57:51.765936398+01:00"
+    }
+  },
+  "sessions": {},
+  "resets": {
+    "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d": {
+      "token": "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "expires_at": "2026-09-07T12:30:28.833781207+01:00",
+      "used": false
+    }
+  },
+  "applications": {
+    "f4df8b9b12a8efb183822fd4ec8d2ad6": {
+      "id": "f4df8b9b12a8efb183822fd4ec8d2ad6",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "nin": "58597589946",
+      "nin_doc_path": "data/uploads/kyc/dba253720c366b44932aa3b8459c4898.jpeg",
+      "alt_id_type": "",
+      "alt_id_value": "",
+      "status": "pending",
+      "submitted_at": "2026-09-07T13:18:04.835866645+01:00",
+      "reviewed_by": ""
+    }
+  },
+  "categories": {
+    "0a8111944b4278fe37280683cd450310": {
+      "id": "0a8111944b4278fe37280683cd450310",
+      "name": "Fashion"
+    },
+    "30e9acd2547272d59a9532f011175a77": {
+      "id": "30e9acd2547272d59a9532f011175a77",
+      "name": "Beauty \u0026 Health"
+    },
+    "47641eb02631c7393eec939e0e108c4c": {
+      "id": "47641eb02631c7393eec939e0e108c4c",
+      "name": "Phones \u0026 Tablets"
+    },
+    "681619c524c36509e7b8168275d6a1f2": {
+      "id": "681619c524c36509e7b8168275d6a1f2",
+      "name": "Electronics"
+    },
+    "985f2c05bcc00e301e16f90a25be5e9b": {
+      "id": "985f2c05bcc00e301e16f90a25be5e9b",
+      "name": "Home \u0026 Living"
+    },
+    "afd733174183c09aee39cc48797655bf": {
+      "id": "afd733174183c09aee39cc48797655bf",
+      "name": "Groceries"
+    }
+  },
+  "listings": {},
+  "orders": {}
+}

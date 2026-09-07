@@ -1,0 +1,173 @@
+{{define "home.html"}}
+{{template "layout_top" .}}
+
+<section class="bleed hero">
+  <div class="hero-inner">
+    <h1 class="hero-headline">Buy anything.<br>Sell anything.<br>Right here in the market.</h1>
+    <p class="hero-sub">Browse what's on the tables today, or open your own stall.</p>
+
+    <form method="get" action="/" class="search-bar">
+      <input type="text" name="q" placeholder="Search the market..." value="{{.Query}}">
+      <select name="category">
+        <option value="">All categories</option>
+        {{range .Categories}}
+          <option value="{{.ID}}" {{if eq $.CategoryID .ID}}selected{{end}}>{{.Name}}</option>
+        {{end}}
+      </select>
+      <button type="submit">Search</button>
+    </form>
+
+    {{if .Categories}}
+    <div class="chip-row">
+      <a href="/" class="chip {{if not .CategoryID}}chip-active{{end}}">All</a>
+      {{range .Categories}}
+        <a href="/?category={{.ID}}" class="chip {{if eq $.CategoryID .ID}}chip-active{{end}}">{{.Name}}</a>
+      {{end}}
+    </div>
+    {{end}}
+  </div>
+</section>
+
+<section class="listings-section">
+  {{if not .Listings}}
+    <div class="empty-state">
+      <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M12 26L16 10H56L60 26" stroke="#0B6E4F" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M8 26H64V58C64 60.2091 62.2091 62 60 62H12C9.79086 62 8 60.2091 8 58V26Z" stroke="#1B2A4A" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M8 26C8 30.4183 11.5817 34 16 34C20.4183 34 24 30.4183 24 26" stroke="#D9A441" stroke-width="3"/>
+        <path d="M24 26C24 30.4183 27.5817 34 32 34C36.4183 34 40 30.4183 40 26" stroke="#D9A441" stroke-width="3"/>
+        <path d="M40 26C40 30.4183 43.5817 34 48 34C52.4183 34 56 30.4183 56 26" stroke="#D9A441" stroke-width="3"/>
+        <path d="M56 26C56 30.4183 59.5817 34 64 34" stroke="#D9A441" stroke-width="3"/>
+      </svg>
+      <h2>The stalls are empty right now</h2>
+      <p class="muted">Nothing matches yet. Try a different search, or be the first to list something here.</p>
+    </div>
+  {{else}}
+  <div class="stall-grid">
+    {{range .Listings}}
+    <a href="/listing?id={{.ID}}" class="stall-card">
+      <div class="stall-image">
+        {{if .ImagePath}}
+          <img src="/uploads/listings/{{basename .ImagePath}}" alt="">
+        {{else}}
+          <div class="stall-image-fallback"></div>
+        {{end}}
+        <span class="price-tag">{{naira .PriceKobo}}</span>
+      </div>
+      <div class="stall-body">
+        <h3>{{.Title}}</h3>
+        <span class="muted">{{.Stock}} in stock</span>
+      </div>
+    </a>
+    {{end}}
+  </div>
+  {{end}}
+</section>
+
+<style>
+  .hero {
+    background: var(--indigo);
+    background-image: radial-gradient(circle at 85% 20%, rgba(217,164,65,0.18), transparent 45%);
+    margin-top: -24px;
+    padding: 56px 24px 40px;
+  }
+  .hero-inner { max-width: 1100px; margin: 0 auto; }
+  .hero-headline {
+    color: var(--cream);
+    font-size: 40px;
+    line-height: 1.25;
+    margin: 0 0 14px;
+    max-width: 620px;
+  }
+  .hero-sub { color: #C9D2E2; font-size: 16px; margin: 0 0 28px; max-width: 480px; }
+
+  .search-bar {
+    display: flex;
+    gap: 10px;
+    max-width: 640px;
+    background: var(--cream);
+    padding: 10px;
+    border-radius: 6px;
+  }
+  .search-bar input, .search-bar select { margin: 0; }
+  .search-bar input { flex: 2; }
+  .search-bar select { flex: 1; }
+  .search-bar button { flex-shrink: 0; }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+  .chip {
+    display: inline-flex; align-items: center;
+    padding: 6px 16px 6px 14px;
+    background: var(--indigo-deep);
+    color: #C9D2E2;
+    text-decoration: none;
+    font-size: 13px;
+    border-radius: 3px 3px 3px 0;
+    position: relative;
+    border: 1px solid rgba(217,164,65,0.35);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .chip:hover { background: rgba(217,164,65,0.16); color: var(--gold); }
+  .chip-active { background: var(--gold); color: var(--indigo-deep); font-weight: 600; border-color: var(--gold); }
+
+  .listings-section { padding-top: 40px; }
+
+  .empty-state { text-align: center; padding: 60px 20px; }
+  .empty-state h2 { font-size: 20px; color: var(--indigo); margin: 18px 0 8px; }
+
+  .stall-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 24px;
+  }
+  .stall-card {
+    display: block;
+    text-decoration: none;
+    color: var(--ink);
+    background: var(--cream);
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(27,42,74,0.12);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .stall-card:hover { transform: translateY(-3px); box-shadow: 0 8px 18px rgba(27,42,74,0.18); }
+
+  .stall-image {
+    position: relative;
+    height: 160px;
+    background: var(--paper);
+    clip-path: polygon(
+      0% 6px, 5% 0%, 10% 6px, 15% 0%, 20% 6px, 25% 0%, 30% 6px, 35% 0%, 40% 6px, 45% 0%,
+      50% 6px, 55% 0%, 60% 6px, 65% 0%, 70% 6px, 75% 0%, 80% 6px, 85% 0%, 90% 6px, 95% 0%, 100% 6px,
+      100% 100%, 0% 100%
+    );
+  }
+  .stall-image img { width: 100%; height: 100%; object-fit: cover; }
+  .stall-image-fallback {
+    width: 100%; height: 100%;
+    background: repeating-linear-gradient(45deg, #E4D9BE, #E4D9BE 10px, #EFE6D2 10px, #EFE6D2 20px);
+  }
+  .price-tag {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background: var(--palm);
+    color: #fff;
+    font-family: 'Bungee', sans-serif;
+    font-size: 13px;
+    padding: 5px 10px 5px 12px;
+    border-radius: 2px;
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 60%);
+  }
+  .stall-body { padding: 14px 14px 16px; }
+  .stall-body h3 { font-size: 15px; margin: 0 0 6px; font-weight: 600; }
+
+  @media (max-width: 640px) {
+    .hero-headline { font-size: 30px; }
+    .search-bar { flex-wrap: wrap; }
+    .search-bar input, .search-bar select { flex: 1 1 100%; }
+  }
+</style>
+
+{{template "layout_bottom" .}}
+{{end}}

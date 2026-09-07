@@ -1,0 +1,26 @@
+{{define "listing_detail.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:500px;">
+  {{if .Listing.ImagePath}}
+    <img src="/uploads/listings/{{basename .Listing.ImagePath}}" style="width:100%;border-radius:6px;">
+  {{end}}
+  <h2>{{.Listing.Title}}</h2>
+  <p>{{.Listing.Description}}</p>
+  <div class="price" style="font-size:20px;">{{naira .Listing.PriceKobo}}</div>
+  <p class="muted">{{.Listing.Stock}} in stock &middot; sold by {{if .Seller}}{{.Seller.Name}}{{else}}Unknown{{end}}</p>
+
+  {{if gt .Listing.Stock 0}}
+  <form method="post" action="/cart/add">
+    <input type="hidden" name="listing_id" value="{{.Listing.ID}}">
+    <label>Quantity</label>
+    <input type="number" name="qty" value="1" min="1" max="{{.Listing.Stock}}">
+    <button type="submit">Add to Cart</button>
+  </form>
+  {{else}}
+    <p class="error">Out of stock</p>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

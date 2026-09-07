@@ -1,0 +1,48 @@
+{{define "seller_listings.html"}}
+{{template "layout_top" .}}
+
+<h2>Your listings</h2>
+
+<div class="card" style="max-width:450px; margin-bottom:24px;">
+  <h3>Add a new listing</h3>
+  <form method="post" action="/seller/listings/create" enctype="multipart/form-data">
+    <label>Title</label>
+    <input type="text" name="title" required>
+    <label>Description</label>
+    <textarea name="description" rows="3"></textarea>
+    <label>Category</label>
+    <select name="category_id" required>
+      {{range .Categories}}<option value="{{.ID}}">{{.Name}}</option>{{end}}
+    </select>
+    <label>Price (₦)</label>
+    <input type="number" name="price" step="0.01" min="0.01" required>
+    <label>Stock</label>
+    <input type="number" name="stock" min="0" required>
+    <label>Image</label>
+    <input type="file" name="image" accept="image/*">
+    <button type="submit">Create Listing</button>
+  </form>
+</div>
+
+<table>
+  <tr><th>Title</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr>
+  {{range .Listings}}
+  <tr>
+    <td>{{.Title}}</td>
+    <td>{{naira .PriceKobo}}</td>
+    <td>{{.Stock}}</td>
+    <td>{{.Status}}</td>
+    <td>
+      {{if ne .Status "removed"}}
+      <form class="inline" method="post" action="/seller/listings/remove">
+        <input type="hidden" name="id" value="{{.ID}}">
+        <button type="submit" class="danger">Remove</button>
+      </form>
+      {{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+
+{{template "layout_bottom" .}}
+{{end}}

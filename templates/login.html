@@ -1,0 +1,22 @@
+{{define "login.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:400px;">
+  <h2>Log in</h2>
+  {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  {{if .Info}}<div class="info">{{.Info}}</div>{{end}}
+  <form method="post" action="/login">
+    <label>Email</label>
+    <input type="email" name="email" required>
+    <label>Password</label>
+    <input type="password" name="password" required>
+    <button type="submit">Log in</button>
+  </form>
+  <p class="muted">
+    <a href="/forgot-password">Forgot password?</a> &middot;
+    No account? <a href="/register">Register</a>
+  </p>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

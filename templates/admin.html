@@ -1,0 +1,40 @@
+{{define "admin.html"}}
+{{template "layout_top" .}}
+
+<h2>Pending seller applications</h2>
+{{if not .Applications}}<p class="muted">Nothing pending.</p>{{end}}
+<table>
+  <tr><th>Applicant</th><th>NIN</th><th>Alt ID</th><th>Submitted</th><th></th></tr>
+  {{range .Applications}}
+  {{$app := .}}
+  <tr>
+    <td>{{with index $.Applicants .UserID}}{{.Name}} ({{.Email}}){{end}}</td>
+    <td>{{.NIN}}</td>
+    <td>{{if .AltIDType}}{{.AltIDType}}: {{.AltIDValue}}{{else}}—{{end}}</td>
+    <td>{{.SubmittedAt.Format "Jan 2, 2006"}}</td>
+    <td>
+      <form class="inline" method="post" action="/admin/applications/decide">
+        <input type="hidden" name="id" value="{{$app.ID}}">
+        <input type="hidden" name="decision" value="approved">
+        <button type="submit">Approve</button>
+      </form>
+      <form class="inline" method="post" action="/admin/applications/decide">
+        <input type="hidden" name="id" value="{{$app.ID}}">
+        <input type="hidden" name="decision" value="rejected">
+        <button type="submit" class="danger">Reject</button>
+      </form>
+    </td>
+  </tr>
+  {{end}}
+</table>
+
+<h2 style="margin-top:32px;">Categories</h2>
+<ul>{{range .Categories}}<li>{{.Name}}</li>{{end}}</ul>
+<form method="post" action="/admin/categories/create" style="max-width:300px;">
+  <label>New category name</label>
+  <input type="text" name="name" required>
+  <button type="submit">Add category</button>
+</form>
+
+{{template "layout_bottom" .}}
+{{end}}

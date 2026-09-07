@@ -1,0 +1,41 @@
+{{define "seller_apply.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:450px;">
+  <h2>Become a seller</h2>
+
+  {{if eq .User.SellerStatus "pending"}}
+    <div class="info">Your application is under review. We'll notify you once it's decided.</div>
+  {{else if eq .User.SellerStatus "approved"}}
+    <div class="info">You're already an approved seller. <a href="/seller/listings">Go to your dashboard</a>.</div>
+  {{else if eq .User.SellerStatus "rejected"}}
+    <div class="error">Your previous application was rejected. Contact support, or resubmit below.</div>
+    <form method="post" action="/seller/apply" enctype="multipart/form-data">
+      <label>NIN (11 digits)</label>
+      <input type="text" name="nin" pattern="[0-9]{11}" required>
+      <label>NIN document photo</label>
+      <input type="file" name="nin_doc" accept="image/*" required>
+      <label>Alternate ID type (optional, e.g. BVN, Voter's Card)</label>
+      <input type="text" name="alt_id_type">
+      <label>Alternate ID value</label>
+      <input type="text" name="alt_id_value">
+      <button type="submit">Resubmit application</button>
+    </form>
+  {{else}}
+    <p class="muted">Sellers must verify their identity with their NIN before listing items.</p>
+    <form method="post" action="/seller/apply" enctype="multipart/form-data">
+      <label>NIN (11 digits)</label>
+      <input type="text" name="nin" pattern="[0-9]{11}" required>
+      <label>NIN document photo</label>
+      <input type="file" name="nin_doc" accept="image/*" required>
+      <label>Alternate ID type (optional, e.g. BVN, Voter's Card)</label>
+      <input type="text" name="alt_id_type">
+      <label>Alternate ID value</label>
+      <input type="text" name="alt_id_value">
+      <button type="submit">Submit application</button>
+    </form>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

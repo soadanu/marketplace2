@@ -1,0 +1,116 @@
+{{define "layout_top"}}
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Kaya Marketplace</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --indigo: #1B2A4A;
+      --indigo-deep: #142038;
+      --gold: #D9A441;
+      --palm: #0B6E4F;
+      --palm-deep: #08573F;
+      --paper: #F3ECDD;
+      --ink: #201B14;
+      --clay: #B5453A;
+      --cream: #FBF7EE;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Work Sans', -apple-system, Segoe UI, Roboto, sans-serif;
+      margin: 0;
+      background: var(--paper);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    h1, h2, .brand, .price-tag, .hero-headline { font-family: 'Bungee', 'Work Sans', sans-serif; font-weight: 400; }
+
+    a { color: inherit; }
+    a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * { transition: none !important; }
+    }
+
+    /* --- Header / nav --- */
+    .site-header {
+      background: var(--indigo);
+      color: var(--cream);
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .site-header a { color: var(--cream); text-decoration: none; margin-right: 18px; font-size: 14px; }
+    .site-header a:hover { color: var(--gold); }
+    .site-header .brand { font-size: 22px; margin-right: 28px; letter-spacing: 0.5px; }
+    .site-header nav { display: flex; align-items: center; flex-wrap: wrap; }
+    .header-left { display: flex; align-items: center; flex-wrap: wrap; }
+    .header-right { font-size: 14px; }
+
+    main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+
+    /* full-bleed helper: lets a section escape main's max-width to run edge to edge */
+    .bleed { width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; }
+
+    /* --- Generic components (used across secondary pages) --- */
+    .card { background: var(--cream); border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(27,42,74,0.1); margin-top: 24px; }
+    form.inline { display: inline; }
+    label { font-size: 13px; font-weight: 600; color: var(--indigo); }
+    input, select, textarea {
+      width: 100%; padding: 10px; margin: 6px 0 14px;
+      border: 1px solid #D8CDB6; border-radius: 5px; font-size: 14px;
+      font-family: inherit; background: #fff; color: var(--ink);
+    }
+    button, .btn {
+      background: var(--palm); color: #fff; border: none; padding: 10px 18px;
+      border-radius: 5px; cursor: pointer; font-size: 14px; text-decoration: none;
+      display: inline-block; font-weight: 600; transition: background 0.15s ease;
+    }
+    button:hover, .btn:hover { background: var(--palm-deep); }
+    button.secondary, .btn.secondary { background: #6B6152; }
+    button.danger, .btn.danger { background: var(--clay); }
+    .error { background: #FBE6E2; color: #7A281F; padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid #EBC3BA; }
+    .info { background: #E4F1EA; color: var(--palm-deep); padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid #C6E2D2; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #E5DBC6; }
+    th { color: var(--indigo); font-size: 13px; }
+    .muted { color: #7A7264; font-size: 13px; }
+    .price { color: var(--palm-deep); font-weight: 700; }
+  </style>
+</head>
+<body>
+<header class="site-header">
+  <div class="header-left">
+    <span class="brand"><a href="/">Kaya</a></span>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/cart">Cart</a>
+      {{if .User}}
+        {{if eq .User.Role "seller"}}<a href="/seller/listings">Seller Dashboard</a>{{else}}<a href="/seller/apply">Become a Seller</a>{{end}}
+        {{if eq .User.Role "admin"}}<a href="/admin">Admin</a>{{end}}
+        <a href="/orders">My Orders</a>
+      {{end}}
+    </nav>
+  </div>
+  <div class="header-right">
+    {{if .User}}
+      <span style="margin-right:14px;">Hi, {{.User.Name}}</span>
+      <a href="/logout">Logout</a>
+    {{else}}
+      <a href="/login">Login</a>
+      <a href="/register">Register</a>
+    {{end}}
+  </div>
+</header>
+<main>
+{{end}}

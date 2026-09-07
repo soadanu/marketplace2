@@ -1,0 +1,31 @@
+{{define "cart.html"}}
+{{template "layout_top" .}}
+
+<h2>Your cart</h2>
+{{if not .Lines}}
+  <p class="muted">Your cart is empty. <a href="/">Browse listings</a>.</p>
+{{else}}
+<table>
+  <tr><th>Item</th><th>Qty</th><th>Subtotal</th><th></th></tr>
+  {{range .Lines}}
+  <tr>
+    <td>{{.Listing.Title}}</td>
+    <td>{{.Qty}}</td>
+    <td>{{naira .Subtotal}}</td>
+    <td>
+      <form class="inline" method="post" action="/cart/remove">
+        <input type="hidden" name="listing_id" value="{{.Listing.ID}}">
+        <button type="submit" class="danger">Remove</button>
+      </form>
+    </td>
+  </tr>
+  {{end}}
+</table>
+<p style="text-align:right; font-size:18px;"><strong>Total: {{naira .Total}}</strong></p>
+<form method="post" action="/checkout" style="text-align:right;">
+  <button type="submit">Checkout</button>
+</form>
+{{end}}
+
+{{template "layout_bottom" .}}
+{{end}}
