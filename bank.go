@@ -5,8 +5,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sort"
+	"sync"
+	"time"
 )
 
 type Bank struct {
@@ -19,31 +22,76 @@ type flwBankListResponse struct {
 	Data   []Bank `json:"data"`
 }
 
+// A short-lived cache for the bank list - it barely ever changes, and
+// caching means a slow or flaky Flutterwave response only affects the first
+// seller to load the page each hour, not every single page view.
+var (
+	bankCacheMu      sync.Mutex
+	bankCache        []Bank
+	bankCacheAt      time.Time
+	bankCacheTimeout = 5 * time.Second // don't let a slow Flutterwave response hang the page load
+)
+
 // fetchNigerianBanks asks Flutterwave for the current list of banks and
 // their codes, used to populate the dropdown on the seller payout form.
+// Failure here is never fatal to the page - see handleSellerPayoutGet, which
+// falls back to manual bank-code entry - but the real error is always
+// logged server-side so it can actually be diagnosed instead of just
+// showing a generic message to the seller.
 func (a *App) fetchNigerianBanks() ([]Bank, error) {
+	bankCacheMu.Lock()
+	if len(bankCache) > 0 && time.Since(bankCacheAt) < time.Hour {
+		cached := bankCache
+		bankCacheMu.Unlock()
+		return cached, nil
+	}
+	bankCacheMu.Unlock()
+
+	client := &http.Client{Timeout: bankCacheTimeout}
 	req, err := http.NewRequest(http.MethodGet, "https://api.flutterwave.com/v3/banks/NG", nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", "Bearer "+a.payments.SecretKey)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("fetchNigerianBanks: request failed: %v", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		log.Printf("fetchNigerianBanks: Flutterwave returned HTTP %d: %s", resp.StatusCode, truncateForLog(body))
+		return nil, fmt.Errorf("Flutterwave returned HTTP %d", resp.StatusCode)
+	}
+
 	var parsed flwBankListResponse
 	if err := json.Unmarshal(body, &parsed); err != nil {
+		log.Printf("fetchNigerianBanks: could not parse response: %v; body: %s", err, truncateForLog(body))
 		return nil, fmt.Errorf("could not parse bank list: %w", err)
 	}
 	if parsed.Status != "success" {
+		log.Printf("fetchNigerianBanks: Flutterwave status was %q, not success; body: %s", parsed.Status, truncateForLog(body))
 		return nil, fmt.Errorf("Flutterwave did not return a bank list")
 	}
 	sort.Slice(parsed.Data, func(i, j int) bool { return parsed.Data[i].Name < parsed.Data[j].Name })
+
+	bankCacheMu.Lock()
+	bankCache = parsed.Data
+	bankCacheAt = time.Now()
+	bankCacheMu.Unlock()
+
 	return parsed.Data, nil
+}
+
+func truncateForLog(b []byte) string {
+	const max = 300
+	if len(b) > max {
+		return string(b[:max]) + "..."
+	}
+	return string(b)
 }
 
 type flwSubaccountRequest struct {

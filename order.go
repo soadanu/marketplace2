@@ -43,6 +43,73 @@ func writeCart(w http.ResponseWriter, c cart) {
 	})
 }
 
+// handleBuyNow is the direct "buy this one item" path from a product page -
+// skips the cart entirely and takes the buyer straight to payment. Shares
+// all the same safety checks as handleCheckout (stock re-check, seller
+// payout gating, reservation) since it's really just a single-item
+// checkout.
+func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) {
+	listingID := r.FormValue("listing_id")
+	qty, err := strconv.Atoi(r.FormValue("qty"))
+	if err != nil || qty < 1 {
+		qty = 1
+	}
+
+	a.store.mu.Lock()
+	l, ok := a.store.Listings[listingID]
+	if !ok || l.Status != "active" || l.Stock < qty {
+		a.store.mu.Unlock()
+		http.Redirect(w, r, "/listing?id="+listingID, http.StatusSeeOther)
+		return
+	}
+	seller, ok := a.store.Users[l.SellerID]
+	if !ok || (a.payments.Configured() && seller.FlutterwaveSubaccountID == "") {
+		a.store.mu.Unlock()
+		http.Redirect(w, r, "/listing?id="+listingID, http.StatusSeeOther)
+		return
+	}
+
+	total := l.PriceKobo * qty
+	fee := int(float64(total) * platformCommissionRate())
+	order := &Order{
+		ID:               newID(),
+		CheckoutGroupID:  newID(),
+		BuyerID:          buyer.ID,
+		SellerID:         l.SellerID,
+		TotalKobo:        total,
+		PlatformFeeKobo:  fee,
+		SellerPayoutKobo: total - fee,
+		Status:           "pending_payment",
+		Items: []OrderItem{{
+			ListingID: l.ID,
+			SellerID:  l.SellerID,
+			Title:     l.Title,
+			Quantity:  qty,
+			PriceKobo: l.PriceKobo,
+		}},
+		CreatedAt: time.Now(),
+	}
+	l.Stock -= qty
+	if l.Stock == 0 {
+		l.Status = "sold_out"
+	}
+	a.store.Orders[order.ID] = order
+	a.store.save()
+	a.store.mu.Unlock()
+
+	if !a.payments.Configured() {
+		a.store.mu.Lock()
+		order.Status = "paid"
+		order.PaymentRef = "dev-mode"
+		a.store.save()
+		a.store.mu.Unlock()
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+
+	a.startOrderPayment(w, r, buyer, order)
+}
+
 func (a *App) handleCartAdd(w http.ResponseWriter, r *http.Request) {
 	id := r.FormValue("listing_id")
 	qty, err := strconv.Atoi(r.FormValue("qty"))

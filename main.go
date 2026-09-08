@@ -46,6 +46,7 @@ func main() {
 	mux.HandleFunc("/cart/add", app.handleCartAdd)
 	mux.HandleFunc("/cart/remove", app.handleCartRemove)
 	mux.HandleFunc("/checkout", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleCheckout(w, r, u) }))
+	mux.HandleFunc("/buy-now", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleBuyNow(w, r, u) }))
 	mux.HandleFunc("/orders", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleOrdersGet(w, r, u) }))
 	mux.HandleFunc("/orders/pay", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handlePayOrder(w, r, u) }))
 	mux.HandleFunc("/payment/callback", app.handlePaymentCallback)

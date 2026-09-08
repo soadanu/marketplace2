@@ -10,13 +10,25 @@
   <div class="price" style="font-size:20px;">{{naira .Listing.PriceKobo}}</div>
   <p class="muted">{{.Listing.Stock}} in stock &middot; sold by {{if .Seller}}{{.Seller.Name}}{{else}}Unknown{{end}}</p>
 
-  {{if gt .Listing.Stock 0}}
-  <form method="post" action="/cart/add">
-    <input type="hidden" name="listing_id" value="{{.Listing.ID}}">
-    <label>Quantity</label>
-    <input type="number" name="qty" value="1" min="1" max="{{.Listing.Stock}}">
-    <button type="submit">Add to Cart</button>
-  </form>
+  {{if not .SellerCanBePaid}}
+    <div class="error">This seller hasn't finished setting up payments yet, so this item can't be bought right now.</div>
+  {{else if gt .Listing.Stock 0}}
+    {{if .User}}
+    <form method="post" action="/buy-now">
+      <input type="hidden" name="listing_id" value="{{.Listing.ID}}">
+      <label>Quantity</label>
+      <input type="number" name="qty" value="1" min="1" max="{{.Listing.Stock}}">
+      <button type="submit" style="width:100%;font-size:16px;padding:12px;">Buy now &mdash; pay {{naira .Listing.PriceKobo}}</button>
+    </form>
+    <p class="muted" style="text-align:center;margin:8px 0;">You'll be taken straight to payment.</p>
+    <form method="post" action="/cart/add">
+      <input type="hidden" name="listing_id" value="{{.Listing.ID}}">
+      <input type="hidden" name="qty" value="1">
+      <button type="submit" class="secondary" style="width:100%;">Add to cart instead</button>
+    </form>
+    {{else}}
+    <a href="/login" class="btn" style="width:100%;text-align:center;font-size:16px;padding:12px;box-sizing:border-box;">Log in to buy this item</a>
+    {{end}}
   {{else}}
     <p class="error">Out of stock</p>
   {{end}}

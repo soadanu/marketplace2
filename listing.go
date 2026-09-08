@@ -59,9 +59,10 @@ func (a *App) handleListingDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	render(w, "listing_detail.html", map[string]any{
-		"Listing": listing,
-		"Seller":  seller,
-		"User":    a.currentUser(r),
+		"Listing":         listing,
+		"Seller":          seller,
+		"User":            a.currentUser(r),
+		"SellerCanBePaid": seller != nil && (!a.payments.Configured() || seller.FlutterwaveSubaccountID != ""),
 	})
 }
 
