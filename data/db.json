@@ -32,10 +32,10 @@
     }
   },
   "sessions": {
-    "0e86e18ffea582fc48cad762d27815ab6d3f54e3a415aaf2b67644f2d41071c9": {
-      "token": "0e86e18ffea582fc48cad762d27815ab6d3f54e3a415aaf2b67644f2d41071c9",
-      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
-      "expires_at": "2026-09-15T10:10:12.031208311+01:00"
+    "a241ccf5ed706a86590d218aa5f45cb09810262ee629618fdb3ec4a0b663e8dc": {
+      "token": "a241ccf5ed706a86590d218aa5f45cb09810262ee629618fdb3ec4a0b663e8dc",
+      "user_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "expires_at": "2026-09-15T15:17:05.091560146+01:00"
     }
   },
   "resets": {

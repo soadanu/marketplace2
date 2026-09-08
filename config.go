@@ -8,8 +8,7 @@ import (
 
 // dataDir is where the JSON store and uploads live. Set DATA_DIR to the
 // mount path of a Render persistent disk (or any durable volume) in
-// production - without it, everything here is lost on every restart/deploy.
-// Defaults to "./data" for local development.
+
 var dataDir = resolveDataDir()
 
 func resolveDataDir() string {
