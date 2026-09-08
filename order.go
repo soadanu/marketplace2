@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"net/url"
 	"sort"
@@ -63,8 +64,8 @@ func (a *App) handleCartRemove(w http.ResponseWriter, r *http.Request) {
 }
 
 type cartLine struct {
-	Listing *Listing
-	Qty     int
+	Listing  *Listing
+	Qty      int
 	Subtotal int
 }
 
@@ -88,83 +89,174 @@ func (a *App) handleCartView(w http.ResponseWriter, r *http.Request) {
 	sort.Slice(lines, func(i, j int) bool { return lines[i].Listing.Title < lines[j].Listing.Title })
 
 	render(w, "cart.html", map[string]any{
-		"Lines": lines,
-		"Total": total,
-		"User":  a.currentUser(r),
+		"Lines":       lines,
+		"Total":       total,
+		"User":        a.currentUser(r),
+		"Unavailable": r.URL.Query().Get("unavailable"),
 	})
 }
 
-// handleCheckout creates the Order from the cart. In a real deployment this
-// is where you'd redirect to Flutterwave's payment page; here it marks the
-// order "placed" and stops - wire in your existing Flutterwave integration
-// (initiate here, confirm via webhook, see note below) to take real payment.
+// handleCheckout creates one Order per seller represented in the cart
+// (reserving stock immediately), tagging them with a shared
+// CheckoutGroupID, then sends the buyer to pay the first one. Splitting by
+// seller like this - rather than one combined transaction - is what lets
+// each order carry a clean, unambiguous split to exactly one seller's
+// Flutterwave subaccount. Each order stays "pending_payment" until
+// confirmOrderPaid verifies the transaction with Flutterwave directly -
+// never trust a redirect alone.
 func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User) {
 	c := readCart(r)
 	if len(c) == 0 {
 		http.Redirect(w, r, "/cart", http.StatusSeeOther)
 		return
 	}
+	commission := platformCommissionRate()
 
 	a.store.mu.Lock()
-	items := make([]OrderItem, 0, len(c))
-	total := 0
+	itemsBySeller := map[string][]OrderItem{}
+	skipped := 0
+	remainingCart := cart{}
 	for id, qty := range c {
 		l, ok := a.store.Listings[id]
 		if !ok || l.Status != "active" || l.Stock < qty {
+			skipped++
 			continue
 		}
-		items = append(items, OrderItem{
+		seller, ok := a.store.Users[l.SellerID]
+		if !ok {
+			skipped++
+			continue
+		}
+		// In live mode, a seller with no payout account configured can't be
+		// paid safely - skip their items rather than take money we can't
+		// route to them.
+		if a.payments.Configured() && seller.FlutterwaveSubaccountID == "" {
+			skipped++
+			remainingCart[id] = qty // leave it in the cart so the buyer isn't just told "gone"
+			continue
+		}
+
+		itemsBySeller[l.SellerID] = append(itemsBySeller[l.SellerID], OrderItem{
 			ListingID: l.ID,
 			SellerID:  l.SellerID,
 			Title:     l.Title,
 			Quantity:  qty,
 			PriceKobo: l.PriceKobo,
 		})
-		total += l.PriceKobo * qty
-		l.Stock -= qty
+		l.Stock -= qty // reserved now; restored by markOrderFailed if payment doesn't go through
 		if l.Stock == 0 {
 			l.Status = "sold_out"
 		}
 	}
 
-	if len(items) == 0 {
+	if len(itemsBySeller) == 0 {
 		a.store.mu.Unlock()
-		http.Redirect(w, r, "/cart", http.StatusSeeOther)
+		http.Redirect(w, r, "/cart?unavailable="+strconv.Itoa(skipped), http.StatusSeeOther)
 		return
 	}
 
-	order := &Order{
-		ID:        newID(),
-		BuyerID:   buyer.ID,
-		TotalKobo: total,
-		Status:    "placed", // becomes "paid" once the Flutterwave webhook confirms payment
-		Items:     items,
-		CreatedAt: time.Now(),
+	groupID := newID()
+	orders := make([]*Order, 0, len(itemsBySeller))
+	for sellerID, items := range itemsBySeller {
+		total := 0
+		for _, it := range items {
+			total += it.PriceKobo * it.Quantity
+		}
+		fee := int(float64(total) * commission)
+		order := &Order{
+			ID:               newID(),
+			CheckoutGroupID:  groupID,
+			BuyerID:          buyer.ID,
+			SellerID:         sellerID,
+			TotalKobo:        total,
+			PlatformFeeKobo:  fee,
+			SellerPayoutKobo: total - fee,
+			Status:           "pending_payment",
+			Items:            items,
+			CreatedAt:        time.Now(),
+		}
+		a.store.Orders[order.ID] = order
+		orders = append(orders, order)
 	}
-	a.store.Orders[order.ID] = order
 	a.store.save()
 	a.store.mu.Unlock()
 
-	writeCart(w, cart{}) // empty the cart
-	http.Redirect(w, r, "/orders", http.StatusSeeOther)
+	writeCart(w, remainingCart) // items we could process are gone from the cart; skipped ones stay
 
-	// NOTE ON PAYMENT: don't trust a redirect alone to mark an order "paid".
-	// Initiate the Flutterwave transaction here (pass order.ID as tx_ref),
-	// then verify it server-side in a webhook handler before flipping
-	// order.Status to "paid". Otherwise a user can forge a success redirect
-	// without actually paying.
+	// Dev mode: no Flutterwave keys configured, so skip real payment and
+	// mark every order paid directly. Remove reliance on this once you
+	// deploy with real keys - see the "Configured" check in payment.go.
+	if !a.payments.Configured() {
+		a.store.mu.Lock()
+		for _, order := range orders {
+			order.Status = "paid"
+			order.PaymentRef = "dev-mode"
+		}
+		a.store.save()
+		a.store.mu.Unlock()
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+
+	a.startOrderPayment(w, r, buyer, orders[0])
+}
+
+// startOrderPayment initiates (or re-initiates) a Flutterwave payment for
+// one pending order and redirects the buyer there. Used both right after
+// checkout and from the "Pay now" button on /orders for any order that's
+// still pending_payment (including a seller-group's later orders, or a
+// retry after a failed attempt).
+func (a *App) startOrderPayment(w http.ResponseWriter, r *http.Request, buyer *User, order *Order) {
+	link, err := a.initiateFlutterwavePayment(order, buyer)
+	if err != nil {
+		log.Printf("checkout: could not initiate payment for order %s: %v", order.ID, err)
+		a.markOrderFailed(order.ID)
+		render(w, "checkout_error.html", map[string]any{"User": buyer})
+		return
+	}
+	http.Redirect(w, r, link, http.StatusSeeOther)
+}
+
+// handlePayOrder lets a buyer (re)start payment for one of their own
+// pending_payment orders - the "Pay now" button on /orders.
+func (a *App) handlePayOrder(w http.ResponseWriter, r *http.Request, buyer *User) {
+	id := r.URL.Query().Get("id")
+	a.store.mu.RLock()
+	order, ok := a.store.Orders[id]
+	a.store.mu.RUnlock()
+
+	if !ok || order.BuyerID != buyer.ID || order.Status != "pending_payment" {
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+	if !a.payments.Configured() {
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+	a.startOrderPayment(w, r, buyer, order)
 }
 
 func (a *App) handleOrdersGet(w http.ResponseWriter, r *http.Request, buyer *User) {
 	a.store.mu.RLock()
 	mine := make([]*Order, 0)
+	sellerNames := map[string]string{}
 	for _, o := range a.store.Orders {
 		if o.BuyerID == buyer.ID {
 			mine = append(mine, o)
+			if _, ok := sellerNames[o.SellerID]; !ok {
+				if s, ok := a.store.Users[o.SellerID]; ok {
+					sellerNames[o.SellerID] = s.Name
+				}
+			}
 		}
 	}
 	a.store.mu.RUnlock()
 	sort.Slice(mine, func(i, j int) bool { return mine[i].CreatedAt.After(mine[j].CreatedAt) })
 
-	render(w, "orders.html", map[string]any{"Orders": mine, "User": buyer})
+	render(w, "orders.html", map[string]any{
+		"Orders":             mine,
+		"SellerNames":        sellerNames,
+		"PaymentsConfigured": a.payments.Configured(),
+		"User":               buyer,
+	})
 }

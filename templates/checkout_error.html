@@ -1,0 +1,11 @@
+{{define "checkout_error.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:450px;">
+  <h2>Couldn't start payment</h2>
+  <div class="error">Something went wrong reaching the payment provider. Your items have been released back to stock - nothing was charged. Please try again.</div>
+  <a href="/cart" class="btn">Back to cart</a>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

@@ -102,7 +102,7 @@ func (a *App) handleSellerListingCreate(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	imagePath, err := saveUploadedFile(r, "image", "data/uploads/listings")
+	imagePath, err := saveUploadedFile(r, "image", dataPath("uploads", "listings"))
 	if err != nil && err != http.ErrMissingFile {
 		http.Error(w, "could not save image: "+err.Error(), http.StatusBadRequest)
 		return

@@ -1,0 +1,47 @@
+{{define "seller_payout.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:450px;">
+  <h2>Payout account</h2>
+
+  {{if not .PaymentsLive}}
+    <div class="error">Payments aren't live on this server yet (no Flutterwave keys configured) - payout setup is disabled until then. This is expected in local/dev testing.</div>
+  {{else}}
+    {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+    {{if .Info}}<div class="info">{{.Info}}</div>{{end}}
+
+    {{if .User.FlutterwaveSubaccountID}}
+      <div class="info">
+        Connected: {{.User.BankName}} &middot; {{.User.BankAccountNumber}}
+        {{if .User.BankAccountName}}<br>Account name on file: {{.User.BankAccountName}}{{end}}
+      </div>
+      <p class="muted">You'll be paid automatically for every sale - Flutterwave settles your share straight to this account. Update your details below if anything changes.</p>
+    {{else}}
+      <p class="muted">Connect your bank account so you can be paid automatically when your items sell. Kaya's commission is deducted automatically - you receive the rest directly.</p>
+    {{end}}
+
+    {{if .BankListError}}<div class="error">{{.BankListError}}</div>{{end}}
+
+    <form method="post" action="/seller/payout">
+      {{if .Banks}}
+        <label>Bank</label>
+        <select name="bank_code" id="bank_code" required onchange="document.getElementById('bank_name').value = this.options[this.selectedIndex].text">
+          <option value="">Select your bank</option>
+          {{range .Banks}}<option value="{{.Code}}">{{.Name}}</option>{{end}}
+        </select>
+        <input type="hidden" name="bank_name" id="bank_name">
+      {{else}}
+        <label>Bank code</label>
+        <input type="text" name="bank_code" placeholder="e.g. 044" required>
+        <label>Bank name</label>
+        <input type="text" name="bank_name" placeholder="e.g. Access Bank" required>
+      {{end}}
+      <label>Account number</label>
+      <input type="text" name="account_number" required>
+      <button type="submit">{{if .User.FlutterwaveSubaccountID}}Update payout account{{else}}Connect payout account{{end}}</button>
+    </form>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

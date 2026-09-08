@@ -7,15 +7,26 @@ import (
 )
 
 type App struct {
-	store *Store
+	store    *Store
+	payments PaymentConfig
 }
 
 func main() {
-	os.MkdirAll("data", 0700)
+	os.MkdirAll(dataPath(), 0700)
+	os.MkdirAll(dataPath("uploads", "listings"), 0700)
+	os.MkdirAll(dataPath("uploads", "kyc"), 0700)
 	loadTemplates()
 
-	app := &App{store: NewStore()}
+	app := &App{store: NewStore(), payments: loadPaymentConfig()}
 	app.ensureAdmin() // creates a default admin account on first run
+
+	if os.Getenv("DATA_DIR") == "" {
+		log.Println("WARNING: DATA_DIR is not set - using local './data'. On Render this folder is WIPED on every restart/deploy/idle-spindown. Attach a persistent disk and set DATA_DIR to its mount path before you rely on this in production.")
+	}
+
+	if !app.payments.Configured() {
+		log.Println("FLW_SECRET_KEY / APP_BASE_URL not set - checkout will run in dev mode (orders marked paid immediately, no real payment taken)")
+	}
 
 	mux := http.NewServeMux()
 
@@ -36,6 +47,9 @@ func main() {
 	mux.HandleFunc("/cart/remove", app.handleCartRemove)
 	mux.HandleFunc("/checkout", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleCheckout(w, r, u) }))
 	mux.HandleFunc("/orders", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleOrdersGet(w, r, u) }))
+	mux.HandleFunc("/orders/pay", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handlePayOrder(w, r, u) }))
+	mux.HandleFunc("/payment/callback", app.handlePaymentCallback)
+	mux.HandleFunc("/payment/webhook", app.handlePaymentWebhook)
 
 	// Become a seller
 	mux.HandleFunc("/seller/apply", app.requireLogin(methodSplitUser(app.handleSellerApplyGet, app.handleSellerApplyPost)))
@@ -44,15 +58,17 @@ func main() {
 	mux.HandleFunc("/seller/listings", app.requireApprovedSeller(app.handleSellerListingsGet))
 	mux.HandleFunc("/seller/listings/create", app.requireApprovedSeller(app.handleSellerListingCreate))
 	mux.HandleFunc("/seller/listings/remove", app.requireApprovedSeller(app.handleSellerListingRemove))
+	mux.HandleFunc("/seller/payout", app.requireApprovedSeller(methodSplitUser(app.handleSellerPayoutGet, app.handleSellerPayoutPost)))
 
 	// Admin
 	mux.HandleFunc("/admin", app.requireAdmin(app.handleAdminDashboard))
+	mux.HandleFunc("/admin/sellers", app.requireAdmin(app.handleAdminSellers))
 	mux.HandleFunc("/admin/applications/decide", app.requireAdmin(app.handleAdminApplicationDecision))
 	mux.HandleFunc("/admin/categories/create", app.requireAdmin(app.handleAdminCategoryCreate))
 
-	// Uploaded listing images are served publicly; KYC documents in
-	// data/uploads/kyc are deliberately NOT mounted here - keep them private.
-	mux.Handle("/uploads/listings/", http.StripPrefix("/uploads/listings/", http.FileServer(http.Dir("data/uploads/listings"))))
+	// Uploaded listing images are served publicly; the KYC documents folder
+	// is deliberately NOT mounted here - keep those private.
+	mux.Handle("/uploads/listings/", http.StripPrefix("/uploads/listings/", http.FileServer(http.Dir(dataPath("uploads", "listings")))))
 
 	addr := ":8080"
 	log.Println("Kaya running at http://localhost" + addr)

@@ -49,7 +49,7 @@ func (a *App) handleForgotPasswordPost(w http.ResponseWriter, r *http.Request) {
 	sendResetEmail(user.Email, link)
 
 	render(w, "forgot_password.html", map[string]string{
-		"Info": "If that email is registered, a reset link has been generated.",
+		"Info":    "If that email is registered, a reset link has been generated.",
 		"DevLink": link, // shown only because there's no mailer yet - remove in production
 	})
 }

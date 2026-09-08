@@ -6,16 +6,19 @@ import (
 	"sync"
 )
 
-const dataFile = "data/db.json"
+// dataFile returns the full path to the JSON store, honoring DATA_DIR.
+func dataFile() string {
+	return dataPath("db.json")
+}
 
 type dbSnapshot struct {
-	Users          map[string]*User               `json:"users"`
-	Sessions       map[string]*Session             `json:"sessions"`
-	Resets         map[string]*PasswordReset       `json:"resets"`
-	Applications   map[string]*SellerApplication   `json:"applications"`
-	Categories     map[string]*Category            `json:"categories"`
-	Listings       map[string]*Listing             `json:"listings"`
-	Orders         map[string]*Order               `json:"orders"`
+	Users        map[string]*User              `json:"users"`
+	Sessions     map[string]*Session           `json:"sessions"`
+	Resets       map[string]*PasswordReset     `json:"resets"`
+	Applications map[string]*SellerApplication `json:"applications"`
+	Categories   map[string]*Category          `json:"categories"`
+	Listings     map[string]*Listing           `json:"listings"`
+	Orders       map[string]*Order             `json:"orders"`
 }
 
 type Store struct {
@@ -57,7 +60,7 @@ func (s *Store) seedCategories() {
 
 // load reads the JSON file into memory. Missing file just means fresh start.
 func (s *Store) load() {
-	b, err := os.ReadFile(dataFile)
+	b, err := os.ReadFile(dataFile())
 	if err != nil {
 		return
 	}
@@ -103,9 +106,9 @@ func (s *Store) save() {
 	if err != nil {
 		return
 	}
-	tmp := dataFile + ".tmp"
+	tmp := dataFile() + ".tmp"
 	if err := os.WriteFile(tmp, b, 0600); err != nil {
 		return
 	}
-	os.Rename(tmp, dataFile)
+	os.Rename(tmp, dataFile())
 }

@@ -32,7 +32,7 @@ func (a *App) handleSellerApplyPost(w http.ResponseWriter, r *http.Request, user
 	}
 
 	// NIN document image is stored in a KYC-only folder, never served publicly.
-	ninDocPath, err := saveUploadedFile(r, "nin_doc", "data/uploads/kyc")
+	ninDocPath, err := saveUploadedFile(r, "nin_doc", dataPath("uploads", "kyc"))
 	if err != nil && err != http.ErrMissingFile {
 		http.Error(w, "could not save ID document: "+err.Error(), http.StatusBadRequest)
 		return
@@ -83,6 +83,57 @@ func (a *App) handleAdminDashboard(w http.ResponseWriter, r *http.Request, admin
 		"Applicants":   applicants,
 		"Categories":   a.sortedCategories(),
 		"User":         admin,
+	})
+}
+
+// sellerDetail bundles everything an admin needs to see about one seller in
+// a single row - their account, their latest verification application, and
+// how many listings they currently have live.
+type sellerDetail struct {
+	User         *User
+	Application  *SellerApplication // most recent one, if any
+	ListingCount int
+	PayoutReady  bool
+}
+
+func (a *App) handleAdminSellers(w http.ResponseWriter, r *http.Request, admin *User) {
+	a.store.mu.RLock()
+	latestApp := map[string]*SellerApplication{}
+	for _, app := range a.store.Applications {
+		cur, ok := latestApp[app.UserID]
+		if !ok || app.SubmittedAt.After(cur.SubmittedAt) {
+			latestApp[app.UserID] = app
+		}
+	}
+
+	listingCounts := map[string]int{}
+	for _, l := range a.store.Listings {
+		if l.Status != "removed" {
+			listingCounts[l.SellerID]++
+		}
+	}
+
+	details := make([]sellerDetail, 0)
+	for _, u := range a.store.Users {
+		// A "seller" here is anyone who has ever applied or holds the role -
+		// covers pending/rejected applicants too, not just approved sellers.
+		if u.Role != "seller" && u.SellerStatus == "" {
+			continue
+		}
+		details = append(details, sellerDetail{
+			User:         u,
+			Application:  latestApp[u.ID],
+			ListingCount: listingCounts[u.ID],
+			PayoutReady:  u.FlutterwaveSubaccountID != "",
+		})
+	}
+	a.store.mu.RUnlock()
+
+	sort.Slice(details, func(i, j int) bool { return details[i].User.Name < details[j].User.Name })
+
+	render(w, "admin_sellers.html", map[string]any{
+		"Sellers": details,
+		"User":    admin,
 	})
 }
 

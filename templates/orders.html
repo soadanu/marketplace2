@@ -3,13 +3,29 @@
 
 <h2>My orders</h2>
 {{if not .Orders}}<p class="muted">No orders yet.</p>{{end}}
+{{$sellerNames := .SellerNames}}
+{{$paymentsLive := .PaymentsConfigured}}
 {{range .Orders}}
 <div class="card" style="margin-bottom:16px;">
-  <div class="muted">{{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Status: <strong>{{.Status}}</strong></div>
+  <div class="muted">
+    {{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Sold by {{index $sellerNames .SellerID}} &middot; Status:
+    {{if eq .Status "paid"}}<strong style="color:var(--palm-deep);">Paid</strong>
+    {{else if eq .Status "pending_payment"}}<strong style="color:var(--gold);">Awaiting payment</strong>
+    {{else if eq .Status "payment_failed"}}<strong style="color:var(--clay);">Payment failed</strong>
+    {{else}}<strong>{{.Status}}</strong>{{end}}
+  </div>
   <ul>
     {{range .Items}}<li>{{.Title}} &times; {{.Quantity}} — {{naira .PriceKobo}} each</li>{{end}}
   </ul>
   <strong>Total: {{naira .TotalKobo}}</strong>
+  {{if and (eq .Status "pending_payment") $paymentsLive}}
+  <form method="post" action="/orders/pay?id={{.ID}}" style="margin-top:10px;">
+    <button type="submit">Pay now</button>
+  </form>
+  {{end}}
+  {{if eq .Status "payment_failed"}}
+  <p class="muted" style="margin-top:8px;">This payment didn't go through - the items were released back to stock. Add them to your cart again to retry.</p>
+  {{end}}
 </div>
 {{end}}
 

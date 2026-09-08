@@ -1,0 +1,40 @@
+{{define "admin_sellers.html"}}
+{{template "layout_top" .}}
+
+<h2>Sellers</h2>
+<p class="muted">Every account that has applied to sell, whether pending, approved, or rejected.</p>
+
+{{if not .Sellers}}
+  <p class="muted">No sellers yet.</p>
+{{end}}
+
+<table>
+  <tr>
+    <th>Name</th><th>Contact</th><th>Status</th><th>NIN</th><th>Listings</th><th>Payout account</th>
+  </tr>
+  {{range .Sellers}}
+  <tr>
+    <td>{{.User.Name}}</td>
+    <td>{{.User.Email}}<br><span class="muted">{{.User.Phone}}</span></td>
+    <td>
+      {{if eq .User.SellerStatus "approved"}}<strong style="color:var(--palm-deep);">Approved</strong>
+      {{else if eq .User.SellerStatus "pending"}}<strong style="color:var(--gold);">Pending</strong>
+      {{else if eq .User.SellerStatus "rejected"}}<strong style="color:var(--clay);">Rejected</strong>
+      {{else}}—{{end}}
+    </td>
+    <td>{{if .Application}}{{.Application.NIN}}{{else}}—{{end}}</td>
+    <td>{{.ListingCount}}</td>
+    <td>
+      {{if .PayoutReady}}
+        <span style="color:var(--palm-deep);">Connected</span><br>
+        <span class="muted">{{.User.BankName}} &middot; {{.User.BankAccountNumber}}</span>
+      {{else}}
+        <span class="muted">Not set up</span>
+      {{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+
+{{template "layout_bottom" .}}
+{{end}}

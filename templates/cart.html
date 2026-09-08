@@ -2,6 +2,9 @@
 {{template "layout_top" .}}
 
 <h2>Your cart</h2>
+{{if .Unavailable}}
+<div class="error">{{.Unavailable}} item(s) in your cart couldn't be checked out right now (out of stock, or that seller hasn't set up payouts yet) and were left in your cart.</div>
+{{end}}
 {{if not .Lines}}
   <p class="muted">Your cart is empty. <a href="/">Browse listings</a>.</p>
 {{else}}

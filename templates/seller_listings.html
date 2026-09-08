@@ -3,6 +3,15 @@
 
 <h2>Your listings</h2>
 
+{{if not .User.FlutterwaveSubaccountID}}
+<div class="error">
+  You haven't connected a payout account yet - buyers can't check out with your items until you do.
+  <a href="/seller/payout">Set up payouts</a>
+</div>
+{{else}}
+<p class="muted"><a href="/seller/payout">Manage payout account</a></p>
+{{end}}
+
 <div class="card" style="max-width:450px; margin-bottom:24px;">
   <h3>Add a new listing</h3>
   <form method="post" action="/seller/listings/create" enctype="multipart/form-data">

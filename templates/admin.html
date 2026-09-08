@@ -1,6 +1,8 @@
 {{define "admin.html"}}
 {{template "layout_top" .}}
 
+<p><a href="/admin/sellers" class="btn secondary">View all sellers</a></p>
+
 <h2>Pending seller applications</h2>
 {{if not .Applications}}<p class="muted">Nothing pending.</p>{{end}}
 <table>

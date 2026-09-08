@@ -11,6 +11,16 @@ type User struct {
 	Role         string    `json:"role"`          // "buyer", "seller", "admin"
 	SellerStatus string    `json:"seller_status"` // "", "pending", "approved", "rejected"
 	CreatedAt    time.Time `json:"created_at"`
+
+	// Payout details - only relevant once SellerStatus == "approved".
+	// FlutterwaveSubaccountID being non-empty means Flutterwave will
+	// automatically settle this seller's share of every sale straight to
+	// their bank account; until it's set, they can't be paid via checkout.
+	BankCode                string `json:"bank_code"` // Flutterwave bank ISO code, e.g. "044"
+	BankName                string `json:"bank_name"` // display name, e.g. "Access Bank"
+	BankAccountNumber       string `json:"bank_account_number"`
+	BankAccountName         string `json:"bank_account_name"` // name returned by Flutterwave when the account was resolved
+	FlutterwaveSubaccountID string `json:"flutterwave_subaccount_id"`
 }
 
 type Session struct {
@@ -57,13 +67,17 @@ type Listing struct {
 }
 
 type Order struct {
-	ID           string      `json:"id"`
-	BuyerID      string      `json:"buyer_id"`
-	TotalKobo    int         `json:"total_kobo"`
-	Status       string      `json:"status"` // "placed", "paid", "shipped", "delivered"
-	PaymentRef   string      `json:"payment_ref"`
-	Items        []OrderItem `json:"items"`
-	CreatedAt    time.Time   `json:"created_at"`
+	ID               string      `json:"id"`
+	CheckoutGroupID  string      `json:"checkout_group_id"` // links orders created from the same cart when it spanned multiple sellers
+	BuyerID          string      `json:"buyer_id"`
+	SellerID         string      `json:"seller_id"` // every item in an Order belongs to one seller - see checkout grouping in order.go
+	TotalKobo        int         `json:"total_kobo"`
+	PlatformFeeKobo  int         `json:"platform_fee_kobo"` // informational - Flutterwave computes the real split itself
+	SellerPayoutKobo int         `json:"seller_payout_kobo"`
+	Status           string      `json:"status"` // "pending_payment", "paid", "payment_failed", "shipped", "delivered"
+	PaymentRef       string      `json:"payment_ref"`
+	Items            []OrderItem `json:"items"`
+	CreatedAt        time.Time   `json:"created_at"`
 }
 
 type OrderItem struct {

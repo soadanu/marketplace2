@@ -7,8 +7,13 @@
       "password_hash": "4a49b24f719206e910b0596750c97fdb$9f9d85b03fa6c9c57900bf193ff85f85141d40cc7db8a4044063fab27f60b77f",
       "phone": "",
       "role": "admin",
-      "seller_status": "",
-      "created_at": "0001-01-01T00:00:00Z"
+      "seller_status": "rejected",
+      "created_at": "0001-01-01T00:00:00Z",
+      "bank_code": "",
+      "bank_name": "",
+      "bank_account_number": "",
+      "bank_account_name": "",
+      "flutterwave_subaccount_id": ""
     },
     "3bf5ff974bd5a8514890f667cfaba5e8": {
       "id": "3bf5ff974bd5a8514890f667cfaba5e8",
@@ -16,12 +21,23 @@
       "email": "solomonadanu16@gmail.com",
       "password_hash": "b93a5fad4e6a4950004eb95015fc5232$ef30ee7fa5f1f3244529294ea848d8a5078955501cfe0ebfceac6163af09eff2",
       "phone": "08032688861",
-      "role": "buyer",
-      "seller_status": "pending",
-      "created_at": "2026-09-07T11:57:51.765936398+01:00"
+      "role": "seller",
+      "seller_status": "approved",
+      "created_at": "2026-09-07T11:57:51.765936398+01:00",
+      "bank_code": "",
+      "bank_name": "",
+      "bank_account_number": "",
+      "bank_account_name": "",
+      "flutterwave_subaccount_id": ""
     }
   },
-  "sessions": {},
+  "sessions": {
+    "0e86e18ffea582fc48cad762d27815ab6d3f54e3a415aaf2b67644f2d41071c9": {
+      "token": "0e86e18ffea582fc48cad762d27815ab6d3f54e3a415aaf2b67644f2d41071c9",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "expires_at": "2026-09-15T10:10:12.031208311+01:00"
+    }
+  },
   "resets": {
     "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d": {
       "token": "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d",
@@ -31,6 +47,17 @@
     }
   },
   "applications": {
+    "a6d2833670111173f32e64842a291b47": {
+      "id": "a6d2833670111173f32e64842a291b47",
+      "user_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "nin": "58597589946",
+      "nin_doc_path": "data/uploads/kyc/8ec4758bcd17225d4a2375f810dc591c.png",
+      "alt_id_type": "",
+      "alt_id_value": "",
+      "status": "rejected",
+      "submitted_at": "2026-09-07T17:24:14.070377131+01:00",
+      "reviewed_by": "2e3177c399d5e22f9976f4157d8d834d"
+    },
     "f4df8b9b12a8efb183822fd4ec8d2ad6": {
       "id": "f4df8b9b12a8efb183822fd4ec8d2ad6",
       "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
@@ -38,9 +65,9 @@
       "nin_doc_path": "data/uploads/kyc/dba253720c366b44932aa3b8459c4898.jpeg",
       "alt_id_type": "",
       "alt_id_value": "",
-      "status": "pending",
+      "status": "approved",
       "submitted_at": "2026-09-07T13:18:04.835866645+01:00",
-      "reviewed_by": ""
+      "reviewed_by": "2e3177c399d5e22f9976f4157d8d834d"
     }
   },
   "categories": {
@@ -69,6 +96,95 @@
       "name": "Groceries"
     }
   },
-  "listings": {},
-  "orders": {}
+  "listings": {
+    "448784de936f3910591455ec04cc744d": {
+      "id": "448784de936f3910591455ec04cc744d",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "681619c524c36509e7b8168275d6a1f2",
+      "title": "HAND FAN",
+      "description": "GOOD PRODUCT",
+      "price_kobo": 3000000,
+      "stock": 0,
+      "image_path": "data/uploads/listings/b90246abec0c16432e7c98ee00ed7e87.png",
+      "status": "sold_out",
+      "created_at": "2026-09-07T17:15:10.277977134+01:00"
+    },
+    "5aa90333b4da415d6e0e92269702cb17": {
+      "id": "5aa90333b4da415d6e0e92269702cb17",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "47641eb02631c7393eec939e0e108c4c",
+      "title": "phone",
+      "description": "A GOOD PHONE",
+      "price_kobo": 9000000,
+      "stock": 0,
+      "image_path": "data/uploads/listings/b2d88325ce195fd4674f095991000636.jpeg",
+      "status": "sold_out",
+      "created_at": "2026-09-07T17:12:09.818932091+01:00"
+    }
+  },
+  "orders": {
+    "97e49013542f75f596565b06085c925d": {
+      "id": "97e49013542f75f596565b06085c925d",
+      "checkout_group_id": "",
+      "buyer_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "seller_id": "",
+      "total_kobo": 9000000,
+      "platform_fee_kobo": 0,
+      "seller_payout_kobo": 0,
+      "status": "placed",
+      "payment_ref": "",
+      "items": [
+        {
+          "listing_id": "5aa90333b4da415d6e0e92269702cb17",
+          "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+          "title": "phone",
+          "quantity": 1,
+          "price_kobo": 9000000
+        }
+      ],
+      "created_at": "2026-09-07T17:13:06.813156103+01:00"
+    },
+    "bc5f22d281a0bafdfa9c716c1dd0b774": {
+      "id": "bc5f22d281a0bafdfa9c716c1dd0b774",
+      "checkout_group_id": "",
+      "buyer_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "seller_id": "",
+      "total_kobo": 3000000,
+      "platform_fee_kobo": 0,
+      "seller_payout_kobo": 0,
+      "status": "placed",
+      "payment_ref": "",
+      "items": [
+        {
+          "listing_id": "448784de936f3910591455ec04cc744d",
+          "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+          "title": "HAND FAN",
+          "quantity": 1,
+          "price_kobo": 3000000
+        }
+      ],
+      "created_at": "2026-09-07T20:29:54.656329943+01:00"
+    },
+    "dc2f4444d9e276758f968ec670dfee13": {
+      "id": "dc2f4444d9e276758f968ec670dfee13",
+      "checkout_group_id": "",
+      "buyer_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "seller_id": "",
+      "total_kobo": 3000000,
+      "platform_fee_kobo": 0,
+      "seller_payout_kobo": 0,
+      "status": "placed",
+      "payment_ref": "",
+      "items": [
+        {
+          "listing_id": "448784de936f3910591455ec04cc744d",
+          "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+          "title": "HAND FAN",
+          "quantity": 1,
+          "price_kobo": 3000000
+        }
+      ],
+      "created_at": "2026-09-07T20:29:38.878561901+01:00"
+    }
+  }
 }
