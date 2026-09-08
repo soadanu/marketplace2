@@ -152,7 +152,9 @@ func (a *App) handleAdminApplicationDecision(w http.ResponseWriter, r *http.Requ
 		app.ReviewedBy = admin.ID
 		if u, ok := a.store.Users[app.UserID]; ok {
 			u.SellerStatus = decision
-			if decision == "approved" {
+			// Approving never demotes an existing admin - an admin can also
+			// sell without losing admin access. Only promote plain buyers.
+			if decision == "approved" && u.Role != "admin" {
 				u.Role = "seller"
 			}
 		}

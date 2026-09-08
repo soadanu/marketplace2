@@ -96,7 +96,7 @@
       <a href="/">Home</a>
       <a href="/cart">Cart</a>
       {{if .User}}
-        {{if eq .User.Role "seller"}}<a href="/seller/listings">Seller Dashboard</a>{{else}}<a href="/seller/apply">Become a Seller</a>{{end}}
+        {{if eq .User.SellerStatus "approved"}}<a href="/seller/listings">Seller Dashboard</a>{{else}}<a href="/seller/apply">Become a Seller</a>{{end}}
         {{if eq .User.Role "admin"}}<a href="/admin">Admin</a>{{end}}
         <a href="/orders">My Orders</a>
       {{end}}
