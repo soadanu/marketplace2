@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
@@ -116,6 +117,50 @@ type flwSubaccountResponse struct {
 	} `json:"data"`
 }
 
+// findExistingSubaccount looks up a previously-created subaccount by
+// account number when Flutterwave refuses to create a duplicate. This
+// happens when a subaccount was successfully created on an earlier attempt
+// but our own record of its ID was lost (e.g. before DATA_DIR was
+// configured, a Render restart wiped the local database even though the
+// subaccount still exists on Flutterwave's side). Rather than leaving the
+// seller stuck, we recover the existing ID and reuse it.
+func (a *App) findExistingSubaccount(accountNumber string) (string, error) {
+	req, err := http.NewRequest(http.MethodGet, "https://api.flutterwave.com/v3/subaccounts", nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Authorization", "Bearer "+a.payments.SecretKey)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var parsed struct {
+		Status string `json:"status"`
+		Data   []struct {
+			SubaccountID  string `json:"subaccount_id"`
+			AccountNumber string `json:"account_number"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return "", fmt.Errorf("could not parse subaccount list: %w", err)
+	}
+	if parsed.Status != "success" {
+		return "", fmt.Errorf("Flutterwave did not return a subaccount list")
+	}
+
+	for _, s := range parsed.Data {
+		if s.AccountNumber == accountNumber && s.SubaccountID != "" {
+			return s.SubaccountID, nil
+		}
+	}
+	return "", fmt.Errorf("no existing subaccount found matching account number %s", accountNumber)
+}
+
 // createFlutterwaveSubaccount registers a seller's payout account with
 // Flutterwave. split_value is set to the platform's commission rate here -
 // per Flutterwave's docs, split_value on a subaccount is "the amount you
@@ -154,6 +199,9 @@ func (a *App) createFlutterwaveSubaccount(seller *User) (*flwSubaccountResponse,
 		return nil, fmt.Errorf("could not parse subaccount response: %w", err)
 	}
 	if parsed.Status != "success" {
+		if strings.Contains(strings.ToLower(parsed.Message), "already exists") {
+			return nil, fmt.Errorf("ALREADY_EXISTS: %s", parsed.Message)
+		}
 		return nil, fmt.Errorf("Flutterwave declined to create the subaccount: %s", parsed.Message)
 	}
 	return &parsed, nil
@@ -203,6 +251,33 @@ func (a *App) handleSellerPayoutPost(w http.ResponseWriter, r *http.Request, sel
 
 	result, err := a.createFlutterwaveSubaccount(seller) // network call - deliberately outside the lock
 	if err != nil {
+		if strings.HasPrefix(err.Error(), "ALREADY_EXISTS:") {
+			// Flutterwave already has a subaccount for this exact bank +
+			// account number - almost certainly from an earlier attempt
+			// whose ID our local record lost (e.g. a Render restart before
+			// DATA_DIR was set up). Recover it instead of leaving the
+			// seller stuck.
+			existingID, lookupErr := a.findExistingSubaccount(accountNumber)
+			if lookupErr != nil {
+				log.Printf("payout setup: subaccount already exists for %s but could not recover its ID: %v", accountNumber, lookupErr)
+				render(w, "seller_payout.html", map[string]any{
+					"User":         seller,
+					"Error":        "This bank account is already connected to a Kaya subaccount on Flutterwave, but we couldn't automatically recover it. Contact support rather than retrying.",
+					"PaymentsLive": true,
+				})
+				return
+			}
+			a.store.mu.Lock()
+			seller.FlutterwaveSubaccountID = existingID
+			a.store.save()
+			a.store.mu.Unlock()
+			render(w, "seller_payout.html", map[string]any{
+				"User":         seller,
+				"Info":         "Payout account reconnected (it already existed from an earlier setup attempt).",
+				"PaymentsLive": true,
+			})
+			return
+		}
 		render(w, "seller_payout.html", map[string]any{"User": seller, "Error": "Could not set up payouts: " + err.Error(), "PaymentsLive": true})
 		return
 	}
