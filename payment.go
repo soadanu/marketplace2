@@ -162,15 +162,41 @@ func (a *App) verifyFlutterwaveTransaction(transactionID string) (*flwVerifyResp
 	return &parsed, nil
 }
 
-// confirmOrderPaid re-verifies a transaction against Flutterwave and, only if
-// amount/currency/status all check out, marks the matching order paid.
-// Called from both the redirect callback and the webhook, so it's written to
-// be safe to call twice for the same order (idempotent).
-func (a *App) confirmOrderPaid(transactionID string) error {
-	verify, err := a.verifyFlutterwaveTransaction(transactionID)
+// verifyFlutterwaveByReference is the same check as
+// verifyFlutterwaveTransaction, but looked up by our own order ID (tx_ref)
+// instead of Flutterwave's numeric transaction ID. This is more robust for
+// re-checking a specific order later - e.g. from the admin "Recheck
+// payment" action - since we always know our own order ID, whereas the
+// numeric transaction_id depends on a query parameter that isn't always
+// present or reliable (notably for async methods like bank transfer).
+func (a *App) verifyFlutterwaveByReference(txRef string) (*flwVerifyResponse, error) {
+	url := "https://api.flutterwave.com/v3/transactions/verify_by_reference?tx_ref=" + txRef
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	req.Header.Set("Authorization", "Bearer "+a.payments.SecretKey)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, _ := io.ReadAll(resp.Body)
+	var parsed flwVerifyResponse
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return nil, fmt.Errorf("could not parse verify_by_reference response: %w", err)
+	}
+	return &parsed, nil
+}
+
+// applyVerifiedTransaction takes an already-fetched Flutterwave verification
+// result and, only if amount/currency/status all check out, marks the
+// matching order paid. Shared by every path that confirms a payment
+// (redirect callback, webhook, and the admin manual recheck) so they can
+// never disagree about what counts as "paid".
+func (a *App) applyVerifiedTransaction(verify *flwVerifyResponse) error {
 	if verify.Status != "success" || verify.Data.Status != "successful" {
 		return fmt.Errorf("transaction not successful (status: %s)", verify.Data.Status)
 	}
@@ -191,14 +217,53 @@ func (a *App) confirmOrderPaid(transactionID string) error {
 		return fmt.Errorf("amount/currency mismatch: expected %.2f NGN, got %.2f %s", expectedNaira, verify.Data.Amount, verify.Data.Currency)
 	}
 
+	wasFailed := order.Status == "payment_failed"
 	order.Status = "paid"
 	order.PaymentRef = verify.Data.FlwRef
+	// If this order had been wrongly marked failed earlier (e.g. by the
+	// pending/async misclassification this function's callers now avoid),
+	// its reserved stock was already released back to the listing. Since
+	// the payment did in fact succeed, take that stock reservation back out
+	// again so it isn't double-available.
+	if wasFailed {
+		for _, item := range order.Items {
+			if l, ok := a.store.Listings[item.ListingID]; ok {
+				l.Stock -= item.Quantity
+				if l.Stock <= 0 {
+					l.Stock = 0
+					l.Status = "sold_out"
+				}
+			}
+		}
+	}
 	a.store.save()
 
 	buyer := a.store.Users[order.BuyerID]
 	seller := a.store.Users[order.SellerID]
 	notifyOrderPaid(order, buyer, seller)
 	return nil
+}
+
+// confirmOrderPaid re-verifies a transaction (by Flutterwave's numeric
+// transaction ID) against Flutterwave and applies the result. Called from
+// the redirect callback and the webhook, so it's written to be safe to call
+// twice for the same order (idempotent).
+func (a *App) confirmOrderPaid(transactionID string) error {
+	verify, err := a.verifyFlutterwaveTransaction(transactionID)
+	if err != nil {
+		return err
+	}
+	return a.applyVerifiedTransaction(verify)
+}
+
+// confirmOrderPaidByRef is the same idea, looked up by tx_ref (our own
+// order ID) instead - used for the admin manual recheck.
+func (a *App) confirmOrderPaidByRef(txRef string) error {
+	verify, err := a.verifyFlutterwaveByReference(txRef)
+	if err != nil {
+		return err
+	}
+	return a.applyVerifiedTransaction(verify)
 }
 
 // notifyOrderPaid is a stand-in for real notification delivery (email/SMS).
@@ -239,20 +304,45 @@ func (a *App) markOrderFailed(orderID string) {
 	a.store.save()
 }
 
+// isTerminalFailure reports whether a Flutterwave status string represents
+// a payment that definitively did NOT succeed and will never become
+// successful later - as opposed to "pending", which async methods like
+// bank transfer and USSD legitimately sit in for a while before either
+// succeeding or failing. Only terminal failures should release reserved
+// stock; anything else (including statuses we don't recognize) should be
+// left alone and reconciled later via the webhook or a manual recheck.
+func isTerminalFailure(status string) bool {
+	switch status {
+	case "cancelled", "failed":
+		return true
+	default:
+		return false
+	}
+}
+
 // handlePaymentCallback is where Flutterwave redirects the buyer's browser
 // back to after they finish on the hosted checkout page. This is a
-// convenience for the user - the webhook below is the source of truth.
+// convenience for the user - the webhook below is the source of truth, and
+// for async methods (bank transfer, USSD) this redirect often fires before
+// the payment has actually been confirmed, so a non-"successful" status
+// here does NOT necessarily mean it failed.
 func (a *App) handlePaymentCallback(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
 	txID := r.URL.Query().Get("transaction_id")
 	txRef := r.URL.Query().Get("tx_ref")
 
-	if status == "successful" && txID != "" {
+	switch {
+	case status == "successful" && txID != "":
 		if err := a.confirmOrderPaid(txID); err != nil {
 			log.Printf("payment callback: verify failed for tx %s: %v", txID, err)
 		}
-	} else if txRef != "" {
+	case isTerminalFailure(status) && txRef != "":
 		a.markOrderFailed(txRef)
+	default:
+		// Likely "pending" (common for bank transfer/USSD) or an unknown
+		// status - leave the order as pending_payment. The webhook, or an
+		// admin recheck, will resolve it once the real outcome is known.
+		log.Printf("payment callback: status %q for tx_ref %s is not a confirmed outcome yet - leaving order pending", status, txRef)
 	}
 
 	http.Redirect(w, r, "/orders", http.StatusSeeOther)
@@ -262,7 +352,8 @@ func (a *App) handlePaymentCallback(w http.ResponseWriter, r *http.Request) {
 // sends regardless of whether the buyer's browser makes it back to your
 // site. This is the reliable path - configure this URL in your Flutterwave
 // dashboard under Settings > Webhooks, with the same secret hash as
-// FLW_SECRET_HASH.
+// FLW_SECRET_HASH. Same caution as the callback above: only a terminal
+// failure status should release stock - "pending" must be left alone.
 func (a *App) handlePaymentWebhook(w http.ResponseWriter, r *http.Request) {
 	signature := r.Header.Get("verif-hash")
 	if a.payments.SecretHash == "" || subtle.ConstantTimeCompare([]byte(signature), []byte(a.payments.SecretHash)) != 1 {
@@ -283,12 +374,15 @@ func (a *App) handlePaymentWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.Data.Status == "successful" {
+	switch {
+	case payload.Data.Status == "successful":
 		if err := a.confirmOrderPaid(fmt.Sprintf("%d", payload.Data.ID)); err != nil {
 			log.Printf("webhook: verify failed for tx %d: %v", payload.Data.ID, err)
 		}
-	} else if payload.Data.TxRef != "" {
+	case isTerminalFailure(payload.Data.Status) && payload.Data.TxRef != "":
 		a.markOrderFailed(payload.Data.TxRef)
+	default:
+		log.Printf("webhook: status %q for tx_ref %s is not a confirmed outcome yet - leaving order pending", payload.Data.Status, payload.Data.TxRef)
 	}
 
 	w.WriteHeader(http.StatusOK)

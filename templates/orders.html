@@ -24,7 +24,13 @@
   </form>
   {{end}}
   {{if eq .Status "payment_failed"}}
-  <p class="muted" style="margin-top:8px;">This payment didn't go through - the items were released back to stock. Add them to your cart again to retry.</p>
+  <p class="muted" style="margin-top:8px;">This payment may not have gone through - the items were released back to stock.</p>
+  {{if $paymentsLive}}
+  <form method="post" action="/orders/recheck?id={{.ID}}">
+    <button type="submit" class="secondary">Recheck with Flutterwave</button>
+  </form>
+  <p class="muted" style="margin-top:4px;">If you actually completed this payment (e.g. via bank transfer), click above to double-check before retrying - transfers can take a moment to confirm.</p>
+  {{end}}
   {{end}}
 </div>
 {{end}}

@@ -49,6 +49,7 @@ func main() {
 	mux.HandleFunc("/buy-now", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleBuyNow(w, r, u) }))
 	mux.HandleFunc("/orders", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleOrdersGet(w, r, u) }))
 	mux.HandleFunc("/orders/pay", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handlePayOrder(w, r, u) }))
+	mux.HandleFunc("/orders/recheck", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleOrderRecheck(w, r, u) }))
 	mux.HandleFunc("/payment/callback", app.handlePaymentCallback)
 	mux.HandleFunc("/payment/webhook", app.handlePaymentWebhook)
 

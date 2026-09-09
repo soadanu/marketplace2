@@ -303,6 +303,32 @@ func (a *App) handlePayOrder(w http.ResponseWriter, r *http.Request, buyer *User
 	a.startOrderPayment(w, r, buyer, order)
 }
 
+// handleOrderRecheck lets a buyer manually re-verify one of their own
+// orders against Flutterwave directly - the fix for any order that got
+// wrongly marked payment_failed by an older version of the callback/webhook
+// logic (see isTerminalFailure in payment.go), and a safety net for async
+// payment methods like bank transfer where confirmation can lag behind.
+func (a *App) handleOrderRecheck(w http.ResponseWriter, r *http.Request, buyer *User) {
+	id := r.URL.Query().Get("id")
+	a.store.mu.RLock()
+	order, ok := a.store.Orders[id]
+	a.store.mu.RUnlock()
+
+	if !ok || order.BuyerID != buyer.ID {
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+	if !a.payments.Configured() {
+		http.Redirect(w, r, "/orders", http.StatusSeeOther)
+		return
+	}
+
+	if err := a.confirmOrderPaidByRef(order.ID); err != nil {
+		log.Printf("manual recheck: order %s still not confirmed paid: %v", order.ID, err)
+	}
+	http.Redirect(w, r, "/orders", http.StatusSeeOther)
+}
+
 func (a *App) handleOrdersGet(w http.ResponseWriter, r *http.Request, buyer *User) {
 	a.store.mu.RLock()
 	mine := make([]*Order, 0)
