@@ -19,9 +19,15 @@
   </ul>
   <strong>Total: {{naira .TotalKobo}}</strong>
   {{if and (eq .Status "pending_payment") $paymentsLive}}
-  <form method="post" action="/orders/pay?id={{.ID}}" style="margin-top:10px;">
-    <button type="submit">Pay now</button>
-  </form>
+  <div style="margin-top:10px;">
+    <form method="post" action="/orders/recheck?id={{.ID}}" style="display:inline;">
+      <button type="submit">Already paid? Check status</button>
+    </form>
+    <form method="post" action="/orders/pay?id={{.ID}}" style="display:inline;">
+      <button type="submit" class="secondary">Not paid yet? Pay now</button>
+    </form>
+  </div>
+  <p class="muted" style="margin-top:6px;">If you already paid (especially by bank transfer), click "Check status" first - transfers can take a moment for Flutterwave to confirm. Only use "Pay now" if you haven't actually completed payment, to avoid paying twice.</p>
   {{end}}
   {{if eq .Status "payment_failed"}}
   <p class="muted" style="margin-top:8px;">This payment may not have gone through - the items were released back to stock.</p>
