@@ -1,14 +1,25 @@
 {{define "listing_detail.html"}}
 {{template "layout_top" .}}
 
-<div class="card" style="max-width:500px;">
-  {{if .Listing.ImagePath}}
-    <img src="/uploads/listings/{{basename .Listing.ImagePath}}" style="width:100%;border-radius:6px;">
+<div class="card" style="max-width:520px;">
+  {{if .Listing.ImagePaths}}
+    <img id="main-listing-image" src="/uploads/listings/{{basename (index .Listing.ImagePaths 0)}}" style="width:100%;border-radius:6px;display:block;">
+    {{if gt (len .Listing.ImagePaths) 1}}
+    <div style="display:flex;gap:8px;margin-top:8px;overflow-x:auto;">
+      {{range .Listing.ImagePaths}}
+      <img src="/uploads/listings/{{basename .}}" onclick="document.getElementById('main-listing-image').src=this.src"
+           style="width:60px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0;border:1px solid #D8CDB6;">
+      {{end}}
+    </div>
+    {{end}}
   {{end}}
   <h2>{{.Listing.Title}}</h2>
   <p>{{.Listing.Description}}</p>
   <div class="price" style="font-size:20px;">{{naira .Listing.PriceKobo}}</div>
-  <p class="muted">{{.Listing.Stock}} in stock &middot; sold by {{if .Seller}}{{.Seller.Name}}{{else}}Unknown{{end}}</p>
+  <p class="muted">
+    {{.Listing.Stock}} in stock &middot; sold by {{if .Seller}}{{.Seller.Name}}{{else}}Unknown{{end}}
+    {{if .Seller}} &middot; <a href="/chat?seller_id={{.Seller.ID}}&listing_id={{.Listing.ID}}">Chat with seller</a>{{end}}
+  </p>
 
   {{if not .SellerCanBePaid}}
     <div class="error">This seller hasn't finished setting up payments yet, so this item can't be bought right now.</div>

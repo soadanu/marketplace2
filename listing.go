@@ -86,8 +86,10 @@ func (a *App) handleSellerListingsGet(w http.ResponseWriter, r *http.Request, se
 	})
 }
 
+const maxListingImages = 6
+
 func (a *App) handleSellerListingCreate(w http.ResponseWriter, r *http.Request, seller *User) {
-	if err := r.ParseMultipartForm(10 << 20); err != nil { // 10MB limit
+	if err := r.ParseMultipartForm(25 << 20); err != nil { // 25MB limit, enough for several images
 		http.Error(w, "form too large or malformed", http.StatusBadRequest)
 		return
 	}
@@ -103,9 +105,9 @@ func (a *App) handleSellerListingCreate(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	imagePath, err := saveUploadedFile(r, "image", dataPath("uploads", "listings"))
-	if err != nil && err != http.ErrMissingFile {
-		http.Error(w, "could not save image: "+err.Error(), http.StatusBadRequest)
+	imagePaths, err := saveUploadedFiles(r, "images", dataPath("uploads", "listings"), maxListingImages)
+	if err != nil {
+		http.Error(w, "could not save images: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -117,7 +119,7 @@ func (a *App) handleSellerListingCreate(w http.ResponseWriter, r *http.Request, 
 		Description: desc,
 		PriceKobo:   int(priceNaira * 100),
 		Stock:       stock,
-		ImagePath:   imagePath,
+		ImagePaths:  imagePaths,
 		Status:      "active",
 		CreatedAt:   time.Now(),
 	}
@@ -141,8 +143,67 @@ func (a *App) handleSellerListingRemove(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, "/seller/listings", http.StatusSeeOther)
 }
 
-// saveUploadedFile reads a multipart file field, content-sniffs it, and
-// writes it under dir with a random name. Returns "" if the field was empty.
+// saveUploadedFiles reads a multipart file field that may contain several
+// files (an <input multiple>), content-sniffs each one, and writes them
+// under dir with random names. Silently skips anything past maxCount rather
+// than erroring, so a seller can't be blocked by picking one extra photo.
+// Returns an empty slice (not an error) if the field was empty - a listing
+// without photos is allowed.
+func saveUploadedFiles(r *http.Request, field, dir string, maxCount int) ([]string, error) {
+	if r.MultipartForm == nil || r.MultipartForm.File == nil {
+		return nil, nil
+	}
+	headers := r.MultipartForm.File[field]
+	if len(headers) == 0 {
+		return nil, nil
+	}
+	if len(headers) > maxCount {
+		headers = headers[:maxCount]
+	}
+
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		return nil, err
+	}
+
+	paths := make([]string, 0, len(headers))
+	for _, header := range headers {
+		file, err := header.Open()
+		if err != nil {
+			return nil, err
+		}
+
+		buf := make([]byte, 512)
+		n, _ := file.Read(buf)
+		contentType := http.DetectContentType(buf[:n])
+		if !strings.HasPrefix(contentType, "image/") {
+			file.Close()
+			return nil, fmt.Errorf("%s is not an image (detected %s)", header.Filename, contentType)
+		}
+		file.Seek(0, io.SeekStart)
+
+		ext := filepath.Ext(header.Filename)
+		name := newID() + ext
+		fullPath := filepath.Join(dir, name)
+
+		out, err := os.Create(fullPath)
+		if err != nil {
+			file.Close()
+			return nil, err
+		}
+		_, copyErr := io.Copy(out, file)
+		out.Close()
+		file.Close()
+		if copyErr != nil {
+			return nil, copyErr
+		}
+		paths = append(paths, fullPath)
+	}
+	return paths, nil
+}
+
+// saveUploadedFile reads a single multipart file field, content-sniffs it,
+// and writes it under dir with a random name. Returns "" if the field was
+// empty. Still used for single-file uploads like the KYC document.
 func saveUploadedFile(r *http.Request, field, dir string) (string, error) {
 	file, header, err := r.FormFile(field)
 	if err != nil {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -45,19 +44,22 @@ func (a *App) handleForgotPasswordPost(w http.ResponseWriter, r *http.Request) {
 	a.store.save()
 	a.store.mu.Unlock()
 
-	link := "/reset-password?token=" + reset.Token
-	sendResetEmail(user.Email, link)
+	link := a.payments.BaseURL + "/reset-password?token=" + reset.Token
+	if a.payments.BaseURL == "" {
+		link = "/reset-password?token=" + reset.Token // local dev fallback, relative link
+	}
+	a.sendEmail(user.Email, "Reset your Kaya password",
+		"Someone (hopefully you) asked to reset the password on your Kaya account.\n\n"+
+			"Click this link to set a new password - it expires in 30 minutes:\n"+link+"\n\n"+
+			"If you didn't request this, you can safely ignore this email.")
 
-	render(w, "forgot_password.html", map[string]string{
-		"Info":    "If that email is registered, a reset link has been generated.",
-		"DevLink": link, // shown only because there's no mailer yet - remove in production
-	})
-}
-
-// sendResetEmail is a stand-in for real email delivery. Replace the body
-// with an SMTP call or a provider API (e.g. Termii, SendGrid) later.
-func sendResetEmail(to, link string) {
-	log.Printf("[password reset] would email %s a link to: %s\n", to, link)
+	info := map[string]string{"Info": "If that email is registered, a reset link has been sent to it."}
+	if !a.email.Configured() {
+		// Dev mode only - no mailer configured, so show the link on screen
+		// since it's only visible in the server console otherwise.
+		info["DevLink"] = link
+	}
+	render(w, "forgot_password.html", info)
 }
 
 func (a *App) handleResetPasswordGet(w http.ResponseWriter, r *http.Request) {

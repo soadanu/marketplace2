@@ -45,9 +45,12 @@ func writeCart(w http.ResponseWriter, c cart) {
 
 // handleBuyNow is the direct "buy this one item" path from a product page -
 // skips the cart entirely and takes the buyer straight to payment. Shares
-// all the same safety checks as handleCheckout (stock re-check, seller
-// payout gating, reservation) since it's really just a single-item
-// checkout.
+// all the same safety checks as handleCheckout (stock availability check,
+// seller payout gating) since it's really just a single-item checkout.
+//
+// Stock is NOT reserved here - the listing stays visible and purchasable by
+// other buyers until this order is actually confirmed paid (see
+// applyVerifiedTransaction in payment.go, the only place stock changes).
 func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) {
 	listingID := r.FormValue("listing_id")
 	qty, err := strconv.Atoi(r.FormValue("qty"))
@@ -89,20 +92,12 @@ func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) 
 		}},
 		CreatedAt: time.Now(),
 	}
-	l.Stock -= qty
-	if l.Stock == 0 {
-		l.Status = "sold_out"
-	}
 	a.store.Orders[order.ID] = order
 	a.store.save()
 	a.store.mu.Unlock()
 
 	if !a.payments.Configured() {
-		a.store.mu.Lock()
-		order.Status = "paid"
-		order.PaymentRef = "dev-mode"
-		a.store.save()
-		a.store.mu.Unlock()
+		a.finalizeOrderPaid(order, "dev-mode")
 		http.Redirect(w, r, "/orders", http.StatusSeeOther)
 		return
 	}
@@ -163,14 +158,16 @@ func (a *App) handleCartView(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// handleCheckout creates one Order per seller represented in the cart
-// (reserving stock immediately), tagging them with a shared
-// CheckoutGroupID, then sends the buyer to pay the first one. Splitting by
-// seller like this - rather than one combined transaction - is what lets
-// each order carry a clean, unambiguous split to exactly one seller's
-// Flutterwave subaccount. Each order stays "pending_payment" until
-// confirmOrderPaid verifies the transaction with Flutterwave directly -
-// never trust a redirect alone.
+// handleCheckout creates one Order per seller represented in the cart,
+// tagging them with a shared CheckoutGroupID, then sends the buyer to pay
+// the first one. Splitting by seller like this - rather than one combined
+// transaction - is what lets each order carry a clean, unambiguous split to
+// exactly one seller's Flutterwave subaccount. Each order stays
+// "pending_payment" until confirmOrderPaid verifies the transaction with
+// Flutterwave directly - never trust a redirect alone.
+//
+// Stock is NOT reserved at this point - see applyVerifiedTransaction in
+// payment.go, the only place stock actually changes, for why.
 func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User) {
 	c := readCart(r)
 	if len(c) == 0 {
@@ -210,10 +207,6 @@ func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User
 			Quantity:  qty,
 			PriceKobo: l.PriceKobo,
 		})
-		l.Stock -= qty // reserved now; restored by markOrderFailed if payment doesn't go through
-		if l.Stock == 0 {
-			l.Status = "sold_out"
-		}
 	}
 
 	if len(itemsBySeller) == 0 {
@@ -251,16 +244,14 @@ func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User
 	writeCart(w, remainingCart) // items we could process are gone from the cart; skipped ones stay
 
 	// Dev mode: no Flutterwave keys configured, so skip real payment and
-	// mark every order paid directly. Remove reliance on this once you
-	// deploy with real keys - see the "Configured" check in payment.go.
+	// mark every order paid directly (through the same finalizeOrderPaid
+	// path real confirmations use, so stock still decrements correctly).
+	// Remove reliance on this once you deploy with real keys - see the
+	// "Configured" check in payment.go.
 	if !a.payments.Configured() {
-		a.store.mu.Lock()
 		for _, order := range orders {
-			order.Status = "paid"
-			order.PaymentRef = "dev-mode"
+			a.finalizeOrderPaid(order, "dev-mode")
 		}
-		a.store.save()
-		a.store.mu.Unlock()
 		http.Redirect(w, r, "/orders", http.StatusSeeOther)
 		return
 	}

@@ -9,6 +9,7 @@ import (
 type App struct {
 	store    *Store
 	payments PaymentConfig
+	email    EmailConfig
 }
 
 func main() {
@@ -17,7 +18,7 @@ func main() {
 	os.MkdirAll(dataPath("uploads", "kyc"), 0700)
 	loadTemplates()
 
-	app := &App{store: NewStore(), payments: loadPaymentConfig()}
+	app := &App{store: NewStore(), payments: loadPaymentConfig(), email: loadEmailConfig()}
 	app.ensureAdmin() // creates a default admin account on first run
 
 	if os.Getenv("DATA_DIR") == "" {
@@ -26,6 +27,10 @@ func main() {
 
 	if !app.payments.Configured() {
 		log.Println("FLW_SECRET_KEY / APP_BASE_URL not set - checkout will run in dev mode (orders marked paid immediately, no real payment taken)")
+	}
+
+	if !app.email.Configured() {
+		log.Println("SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM not set - emails (password reset, etc) will be logged to the console instead of actually sent")
 	}
 
 	mux := http.NewServeMux()
@@ -67,6 +72,14 @@ func main() {
 	mux.HandleFunc("/admin/sellers", app.requireAdmin(app.handleAdminSellers))
 	mux.HandleFunc("/admin/applications/decide", app.requireAdmin(app.handleAdminApplicationDecision))
 	mux.HandleFunc("/admin/categories/create", app.requireAdmin(app.handleAdminCategoryCreate))
+	mux.HandleFunc("/admin/support", app.requireAdmin(app.handleAdminSupport))
+
+	// Chat / customer care
+	mux.HandleFunc("/chat", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleChatOpen(w, r, u) }))
+	mux.HandleFunc("/chat/view", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleChatView(w, r, u) }))
+	mux.HandleFunc("/chat/send", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleChatSend(w, r, u) }))
+	mux.HandleFunc("/inbox", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleInbox(w, r, u) }))
+	mux.HandleFunc("/support", app.requireLogin(func(w http.ResponseWriter, r *http.Request, u *User) { app.handleSupportOpen(w, r, u) }))
 
 	// Uploaded listing images are served publicly; the KYC documents folder
 	// is deliberately NOT mounted here - keep those private.

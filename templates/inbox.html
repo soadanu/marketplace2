@@ -1,0 +1,19 @@
+{{define "inbox.html"}}
+{{template "layout_top" .}}
+
+<h2>Messages</h2>
+{{if not .Conversations}}
+  <p class="muted">No conversations yet. Chat with a seller from any product page, or <a href="/support">contact support</a>.</p>
+{{end}}
+
+<div style="display:flex;flex-direction:column;gap:10px;">
+  {{range .Conversations}}
+  <a href="/chat/view?id={{.Conversation.ID}}" class="card" style="display:block;text-decoration:none;color:var(--ink);margin-top:0;">
+    <strong>{{if .IsSupport}}Kaya Support{{else}}{{.OtherName}}{{end}}</strong>
+    <p class="muted" style="margin:4px 0 0;">{{if .LastMessage}}{{.LastMessage}}{{else}}No messages yet{{end}}</p>
+  </a>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

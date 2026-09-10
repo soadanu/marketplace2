@@ -61,9 +61,28 @@ type Listing struct {
 	Description string    `json:"description"`
 	PriceKobo   int       `json:"price_kobo"`
 	Stock       int       `json:"stock"`
-	ImagePath   string    `json:"image_path"`
-	Status      string    `json:"status"` // "active", "sold_out", "removed"
+	ImagePaths  []string  `json:"image_paths"` // up to maxListingImages - first one is the cover shown on the home grid
+	Status      string    `json:"status"`      // "active", "sold_out", "removed"
 	CreatedAt   time.Time `json:"created_at"`
+}
+
+// Conversation is a chat thread - either between a buyer and a seller
+// (optionally about a specific listing), or a buyer/seller and general
+// support (SellerID == "support" in that case).
+type Conversation struct {
+	ID        string    `json:"id"`
+	BuyerID   string    `json:"buyer_id"`
+	SellerID  string    `json:"seller_id"` // "support" for the general customer care thread
+	ListingID string    `json:"listing_id"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+type Message struct {
+	ID             string    `json:"id"`
+	ConversationID string    `json:"conversation_id"`
+	SenderID       string    `json:"sender_id"`
+	Body           string    `json:"body"`
+	CreatedAt      time.Time `json:"created_at"`
 }
 
 type Order struct {
@@ -77,6 +96,7 @@ type Order struct {
 	Status           string      `json:"status"` // "pending_payment", "paid", "payment_failed", "shipped", "delivered"
 	PaymentRef       string      `json:"payment_ref"`
 	Items            []OrderItem `json:"items"`
+	OversoldWarning  string      `json:"oversold_warning,omitempty"` // set if stock ran out between order and confirmed payment - needs manual admin follow-up
 	CreatedAt        time.Time   `json:"created_at"`
 }
 

@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 // PaymentConfig holds everything needed to talk to Flutterwave. Populated
@@ -202,46 +203,81 @@ func (a *App) applyVerifiedTransaction(verify *flwVerifyResponse) error {
 	}
 
 	a.store.mu.Lock()
-	defer a.store.mu.Unlock()
-
 	order, ok := a.store.Orders[verify.Data.TxRef]
 	if !ok {
+		a.store.mu.Unlock()
 		return fmt.Errorf("no matching order for tx_ref %s", verify.Data.TxRef)
 	}
 	if order.Status == "paid" {
+		a.store.mu.Unlock()
 		return nil // already confirmed - e.g. webhook arrived after the redirect already handled it
 	}
 
 	expectedNaira := float64(order.TotalKobo) / 100.0
 	if verify.Data.Currency != "NGN" || verify.Data.Amount < expectedNaira {
+		a.store.mu.Unlock()
 		return fmt.Errorf("amount/currency mismatch: expected %.2f NGN, got %.2f %s", expectedNaira, verify.Data.Amount, verify.Data.Currency)
 	}
+	a.store.mu.Unlock()
 
-	wasFailed := order.Status == "payment_failed"
+	a.finalizeOrderPaid(order, verify.Data.FlwRef)
+	return nil
+}
+
+// finalizeOrderPaid is the ONE place that transitions an order to "paid" -
+// used by real Flutterwave confirmations (applyVerifiedTransaction above)
+// AND by the dev-mode shortcuts in order.go, so both paths always agree on
+// what "paid" means: stock decrements exactly once, oversold orders get
+// flagged, and both parties get notified. Having a single shared function
+// here is deliberate - a separate ad-hoc "mark paid" branch is exactly how
+// the dev-mode stock bug happened the first time.
+//
+// Stock is deliberately NOT reserved when an order is created (see
+// handleCheckout/handleBuyNow in order.go) - a listing stays visible and
+// purchasable by other buyers right up until a payment actually confirms,
+// which is what this function represents. Two buyers can legitimately both
+// complete payment for the last unit in a short window; when that happens
+// we don't refuse the money (there's no automated refund flow wired in) -
+// we floor stock at zero, mark the listing sold out, and flag the order's
+// OversoldWarning so an admin can manually resolve it.
+func (a *App) finalizeOrderPaid(order *Order, paymentRef string) {
+	a.store.mu.Lock()
+
+	if order.Status == "paid" {
+		a.store.mu.Unlock()
+		return
+	}
 	order.Status = "paid"
-	order.PaymentRef = verify.Data.FlwRef
-	// If this order had been wrongly marked failed earlier (e.g. by the
-	// pending/async misclassification this function's callers now avoid),
-	// its reserved stock was already released back to the listing. Since
-	// the payment did in fact succeed, take that stock reservation back out
-	// again so it isn't double-available.
-	if wasFailed {
-		for _, item := range order.Items {
-			if l, ok := a.store.Listings[item.ListingID]; ok {
-				l.Stock -= item.Quantity
-				if l.Stock <= 0 {
-					l.Stock = 0
-					l.Status = "sold_out"
-				}
-			}
+	order.PaymentRef = paymentRef
+
+	var shortfalls []string
+	for _, item := range order.Items {
+		l, ok := a.store.Listings[item.ListingID]
+		if !ok {
+			shortfalls = append(shortfalls, item.Title+" (listing no longer exists)")
+			continue
+		}
+		if l.Stock < item.Quantity {
+			shortfalls = append(shortfalls, fmt.Sprintf("%s (wanted %d, only %d left)", item.Title, item.Quantity, l.Stock))
+			l.Stock = 0
+		} else {
+			l.Stock -= item.Quantity
+		}
+		if l.Stock == 0 {
+			l.Status = "sold_out"
 		}
 	}
-	a.store.save()
+	if len(shortfalls) > 0 {
+		order.OversoldWarning = "Paid, but ran short on stock for: " + strings.Join(shortfalls, "; ") + " - contact the buyer to arrange a refund or substitute."
+		log.Printf("[OVERSOLD] order %s: %s", order.ID, order.OversoldWarning)
+	}
 
+	a.store.save()
 	buyer := a.store.Users[order.BuyerID]
 	seller := a.store.Users[order.SellerID]
-	notifyOrderPaid(order, buyer, seller)
-	return nil
+	a.store.mu.Unlock()
+
+	a.notifyOrderPaid(order, buyer, seller)
 }
 
 // confirmOrderPaid re-verifies a transaction (by Flutterwave's numeric
@@ -266,24 +302,26 @@ func (a *App) confirmOrderPaidByRef(txRef string) error {
 	return a.applyVerifiedTransaction(verify)
 }
 
-// notifyOrderPaid is a stand-in for real notification delivery (email/SMS).
-// Replace with an actual provider call - same pattern as sendResetEmail in
-// password_reset.go. For now it logs clearly so you can see the trigger
-// point is correct while wiring in a real notifier.
-func notifyOrderPaid(order *Order, buyer, seller *User) {
-	buyerEmail, sellerEmail := "unknown", "unknown"
+// notifyOrderPaid emails both the buyer and seller once an order is
+// confirmed paid. Falls back to a console log if SMTP isn't configured, via
+// sendEmail's own dev-mode handling.
+func (a *App) notifyOrderPaid(order *Order, buyer, seller *User) {
 	if buyer != nil {
-		buyerEmail = buyer.Email
+		a.sendEmail(buyer.Email, "Your Kaya order is confirmed",
+			fmt.Sprintf("Your payment of %s went through and your order has been confirmed.\n\nOrder ID: %s\n\nYou can view your order at any time from the Messages/My Orders menu on Kaya.",
+				formatNaira(order.TotalKobo), order.ID))
 	}
 	if seller != nil {
-		sellerEmail = seller.Email
+		a.sendEmail(seller.Email, "You made a sale on Kaya",
+			fmt.Sprintf("One of your listings just sold. Your payout of %s is on its way to your connected bank account.\n\nOrder ID: %s",
+				formatNaira(order.SellerPayoutKobo), order.ID))
 	}
-	log.Printf("[order paid] order %s: would notify buyer %s (order confirmed) and seller %s (payout of %s en route to their bank)",
-		order.ID, buyerEmail, sellerEmail, formatNaira(order.SellerPayoutKobo))
 }
 
-// markOrderFailed restores stock for an order whose payment did not go
-// through, so items aren't stuck reserved forever.
+// markOrderFailed marks an order as failed. Stock was never reserved for it
+// in the first place (see handleCheckout/handleBuyNow), so there's nothing
+// to release here - the listing was purchasable by other buyers the whole
+// time this order was pending.
 func (a *App) markOrderFailed(orderID string) {
 	a.store.mu.Lock()
 	defer a.store.mu.Unlock()
@@ -293,14 +331,6 @@ func (a *App) markOrderFailed(orderID string) {
 		return
 	}
 	order.Status = "payment_failed"
-	for _, item := range order.Items {
-		if l, ok := a.store.Listings[item.ListingID]; ok {
-			l.Stock += item.Quantity
-			if l.Status == "sold_out" && l.Stock > 0 {
-				l.Status = "active"
-			}
-		}
-	}
 	a.store.save()
 }
 

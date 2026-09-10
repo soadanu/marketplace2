@@ -1,0 +1,21 @@
+{{define "admin_support.html"}}
+{{template "layout_top" .}}
+
+<h2>Support inbox</h2>
+<p class="muted">Every customer who has contacted general support.</p>
+
+{{if not .Conversations}}
+  <p class="muted">No support conversations yet.</p>
+{{end}}
+
+<div style="display:flex;flex-direction:column;gap:10px;">
+  {{range .Conversations}}
+  <a href="/chat/view?id={{.Conversation.ID}}" class="card" style="display:block;text-decoration:none;color:var(--ink);margin-top:0;">
+    <strong>{{.OtherName}}</strong>
+    <p class="muted" style="margin:4px 0 0;">{{if .LastMessage}}{{.LastMessage}}{{else}}No messages yet{{end}}</p>
+  </a>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

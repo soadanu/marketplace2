@@ -47,8 +47,8 @@
     {{range .Listings}}
     <a href="/listing?id={{.ID}}" class="stall-card">
       <div class="stall-image">
-        {{if .ImagePath}}
-          <img src="/uploads/listings/{{basename .ImagePath}}" alt="">
+        {{if .ImagePaths}}
+          <img src="/uploads/listings/{{basename (index .ImagePaths 0)}}" alt="">
         {{else}}
           <div class="stall-image-fallback"></div>
         {{end}}

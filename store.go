@@ -12,35 +12,41 @@ func dataFile() string {
 }
 
 type dbSnapshot struct {
-	Users        map[string]*User              `json:"users"`
-	Sessions     map[string]*Session           `json:"sessions"`
-	Resets       map[string]*PasswordReset     `json:"resets"`
-	Applications map[string]*SellerApplication `json:"applications"`
-	Categories   map[string]*Category          `json:"categories"`
-	Listings     map[string]*Listing           `json:"listings"`
-	Orders       map[string]*Order             `json:"orders"`
+	Users         map[string]*User              `json:"users"`
+	Sessions      map[string]*Session           `json:"sessions"`
+	Resets        map[string]*PasswordReset     `json:"resets"`
+	Applications  map[string]*SellerApplication `json:"applications"`
+	Categories    map[string]*Category          `json:"categories"`
+	Listings      map[string]*Listing           `json:"listings"`
+	Orders        map[string]*Order             `json:"orders"`
+	Conversations map[string]*Conversation      `json:"conversations"`
+	Messages      map[string]*Message           `json:"messages"`
 }
 
 type Store struct {
-	mu           sync.RWMutex
-	Users        map[string]*User
-	Sessions     map[string]*Session
-	Resets       map[string]*PasswordReset
-	Applications map[string]*SellerApplication
-	Categories   map[string]*Category
-	Listings     map[string]*Listing
-	Orders       map[string]*Order
+	mu            sync.RWMutex
+	Users         map[string]*User
+	Sessions      map[string]*Session
+	Resets        map[string]*PasswordReset
+	Applications  map[string]*SellerApplication
+	Categories    map[string]*Category
+	Listings      map[string]*Listing
+	Orders        map[string]*Order
+	Conversations map[string]*Conversation
+	Messages      map[string]*Message
 }
 
 func NewStore() *Store {
 	s := &Store{
-		Users:        map[string]*User{},
-		Sessions:     map[string]*Session{},
-		Resets:       map[string]*PasswordReset{},
-		Applications: map[string]*SellerApplication{},
-		Categories:   map[string]*Category{},
-		Listings:     map[string]*Listing{},
-		Orders:       map[string]*Order{},
+		Users:         map[string]*User{},
+		Sessions:      map[string]*Session{},
+		Resets:        map[string]*PasswordReset{},
+		Applications:  map[string]*SellerApplication{},
+		Categories:    map[string]*Category{},
+		Listings:      map[string]*Listing{},
+		Orders:        map[string]*Order{},
+		Conversations: map[string]*Conversation{},
+		Messages:      map[string]*Message{},
 	}
 	s.load()
 	if len(s.Categories) == 0 {
@@ -89,18 +95,26 @@ func (s *Store) load() {
 	if snap.Orders != nil {
 		s.Orders = snap.Orders
 	}
+	if snap.Conversations != nil {
+		s.Conversations = snap.Conversations
+	}
+	if snap.Messages != nil {
+		s.Messages = snap.Messages
+	}
 }
 
 // save must be called with s.mu held (or right after a write while still holding it).
 func (s *Store) save() {
 	snap := dbSnapshot{
-		Users:        s.Users,
-		Sessions:     s.Sessions,
-		Resets:       s.Resets,
-		Applications: s.Applications,
-		Categories:   s.Categories,
-		Listings:     s.Listings,
-		Orders:       s.Orders,
+		Users:         s.Users,
+		Sessions:      s.Sessions,
+		Resets:        s.Resets,
+		Applications:  s.Applications,
+		Categories:    s.Categories,
+		Listings:      s.Listings,
+		Orders:        s.Orders,
+		Conversations: s.Conversations,
+		Messages:      s.Messages,
 	}
 	b, err := json.MarshalIndent(snap, "", "  ")
 	if err != nil {

@@ -1,0 +1,30 @@
+{{define "chat_view.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:600px;">
+  <h2>{{.OtherName}}</h2>
+  {{if .Listing}}<p class="muted">About: <a href="/listing?id={{.Listing.ID}}">{{.Listing.Title}}</a></p>{{end}}
+
+  <div style="max-height:400px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:8px 0;">
+    {{if not .Messages}}
+      <p class="muted">No messages yet - say hello.</p>
+    {{end}}
+    {{range .Messages}}
+    <div style="max-width:75%;{{if .FromMe}}align-self:flex-end;{{end}}">
+      <div style="background:{{if .FromMe}}var(--palm){{else}}var(--paper){{end}};color:{{if .FromMe}}#fff{{else}}var(--ink){{end}};padding:8px 12px;border-radius:10px;">
+        {{.Message.Body}}
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:2px;{{if .FromMe}}text-align:right;{{end}}">{{.Message.CreatedAt.Format "Jan 2, 3:04 PM"}}</div>
+    </div>
+    {{end}}
+  </div>
+
+  <form method="post" action="/chat/send" style="display:flex;gap:8px;margin-top:14px;">
+    <input type="hidden" name="conversation_id" value="{{.Conversation.ID}}">
+    <input type="text" name="body" placeholder="Type a message..." required style="margin:0;flex:1;">
+    <button type="submit">Send</button>
+  </form>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

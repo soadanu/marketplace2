@@ -62,6 +62,32 @@
     /* full-bleed helper: lets a section escape main's max-width to run edge to edge */
     .bleed { width: 100vw; position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; }
 
+    /* --- Account dropdown menu (native <details>, no JS needed) --- */
+    .nav-dropdown { position: relative; display: inline-block; }
+    .nav-dropdown summary {
+      list-style: none; cursor: pointer; color: var(--cream);
+      padding: 4px 0; font-size: 14px; display: inline-flex; align-items: center; gap: 4px;
+    }
+    .nav-dropdown summary::-webkit-details-marker { display: none; }
+    .nav-dropdown summary:hover { color: var(--gold); }
+    .nav-dropdown summary::after { content: '▾'; font-size: 11px; }
+    .nav-dropdown[open] summary::after { content: '▴'; }
+    .nav-dropdown .dropdown-panel {
+      position: absolute; top: calc(100% + 10px); left: 0;
+      background: var(--cream); border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      min-width: 200px; padding: 6px 0; z-index: 20;
+    }
+    .nav-dropdown .dropdown-panel a {
+      display: block; padding: 10px 16px; color: var(--ink) !important;
+      font-size: 14px; text-decoration: none;
+    }
+    .nav-dropdown .dropdown-panel a:hover { background: var(--paper); color: var(--palm-deep) !important; }
+    .nav-dropdown .dropdown-panel .divider { border-top: 1px solid #E5DBC6; margin: 6px 0; }
+    /* Close the dropdown when clicking elsewhere, via a full-screen backdrop */
+    .nav-dropdown[open]::before {
+      content: ''; position: fixed; inset: 0; z-index: 10;
+    }
+
     /* --- Generic components (used across secondary pages) --- */
     .card { background: var(--cream); border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(27,42,74,0.1); margin-top: 24px; }
     form.inline { display: inline; }
@@ -94,12 +120,33 @@
     <span class="brand"><a href="/">Kaya</a></span>
     <nav>
       <a href="/">Home</a>
-      <a href="/cart">Cart</a>
-      {{if .User}}
-        {{if eq .User.SellerStatus "approved"}}<a href="/seller/listings">Seller Dashboard</a>{{else}}<a href="/seller/apply">Become a Seller</a>{{end}}
-        {{if eq .User.Role "admin"}}<a href="/admin">Admin</a>{{end}}
-        <a href="/orders">My Orders</a>
-      {{end}}
+      <details class="nav-dropdown">
+        <summary>Menu</summary>
+        <div class="dropdown-panel">
+          <a href="/cart">Cart</a>
+          {{if .User}}
+            <a href="/orders">My Orders</a>
+            <a href="/inbox">Messages</a>
+            <div class="divider"></div>
+            {{if eq .User.SellerStatus "approved"}}
+              <a href="/seller/listings">Seller Dashboard</a>
+              <a href="/seller/payout">Payout Account</a>
+            {{else}}
+              <a href="/seller/apply">Become a Seller</a>
+            {{end}}
+            {{if eq .User.Role "admin"}}
+              <div class="divider"></div>
+              <a href="/admin">Admin</a>
+              <a href="/admin/sellers">Sellers</a>
+              <a href="/admin/support">Support Inbox</a>
+            {{end}}
+            <div class="divider"></div>
+            <a href="/support">Contact Support</a>
+          {{else}}
+            <a href="/support">Contact Support</a>
+          {{end}}
+        </div>
+      </details>
     </nav>
   </div>
   <div class="header-right">
