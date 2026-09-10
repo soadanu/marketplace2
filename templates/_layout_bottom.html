@@ -1,5 +1,18 @@
 {{define "layout_bottom"}}
 </main>
+<script>
+  // Close any open nav dropdown when clicking outside it - <details>
+  // doesn't do this natively, and clicking a link inside it should also
+  // close it before navigating so it doesn't stay open on the next page.
+  document.addEventListener('click', function (e) {
+    document.querySelectorAll('.nav-dropdown[open]').forEach(function (menu) {
+      if (!menu.contains(e.target)) {
+        menu.removeAttribute('open');
+      }
+    });
+  });
+</script>
 </body>
 </html>
 {{end}}
+

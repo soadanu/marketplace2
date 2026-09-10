@@ -83,10 +83,6 @@
     }
     .nav-dropdown .dropdown-panel a:hover { background: var(--paper); color: var(--palm-deep) !important; }
     .nav-dropdown .dropdown-panel .divider { border-top: 1px solid #E5DBC6; margin: 6px 0; }
-    /* Close the dropdown when clicking elsewhere, via a full-screen backdrop */
-    .nav-dropdown[open]::before {
-      content: ''; position: fixed; inset: 0; z-index: 10;
-    }
 
     /* --- Generic components (used across secondary pages) --- */
     .card { background: var(--cream); border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(27,42,74,0.1); margin-top: 24px; }

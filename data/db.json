@@ -32,10 +32,10 @@
     }
   },
   "sessions": {
-    "a241ccf5ed706a86590d218aa5f45cb09810262ee629618fdb3ec4a0b663e8dc": {
-      "token": "a241ccf5ed706a86590d218aa5f45cb09810262ee629618fdb3ec4a0b663e8dc",
-      "user_id": "2e3177c399d5e22f9976f4157d8d834d",
-      "expires_at": "2026-09-15T15:17:05.091560146+01:00"
+    "0ddec784dd03d2e791a1d907c031f272575012445e9dddb5a74689c8cca9cb6e": {
+      "token": "0ddec784dd03d2e791a1d907c031f272575012445e9dddb5a74689c8cca9cb6e",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "expires_at": "2026-09-17T08:54:34.208718968+01:00"
     }
   },
   "resets": {
@@ -105,7 +105,7 @@
       "description": "GOOD PRODUCT",
       "price_kobo": 3000000,
       "stock": 0,
-      "image_path": "data/uploads/listings/b90246abec0c16432e7c98ee00ed7e87.png",
+      "image_paths": null,
       "status": "sold_out",
       "created_at": "2026-09-07T17:15:10.277977134+01:00"
     },
@@ -117,7 +117,7 @@
       "description": "A GOOD PHONE",
       "price_kobo": 9000000,
       "stock": 0,
-      "image_path": "data/uploads/listings/b2d88325ce195fd4674f095991000636.jpeg",
+      "image_paths": null,
       "status": "sold_out",
       "created_at": "2026-09-07T17:12:09.818932091+01:00"
     }
@@ -186,5 +186,15 @@
       ],
       "created_at": "2026-09-07T20:29:38.878561901+01:00"
     }
-  }
+  },
+  "conversations": {
+    "a469dd5e17844d9151ff20892e421160": {
+      "id": "a469dd5e17844d9151ff20892e421160",
+      "buyer_id": "2e3177c399d5e22f9976f4157d8d834d",
+      "seller_id": "support",
+      "listing_id": "",
+      "created_at": "2026-09-10T08:54:21.253871898+01:00"
+    }
+  },
+  "messages": {}
 }
