@@ -9,9 +9,9 @@
 <div class="card" style="margin-bottom:16px;">
   <div class="muted">
     {{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Sold by {{index $sellerNames .SellerID}} &middot; Status:
-    {{if eq .Status "paid"}}<strong style="color:var(--palm-deep);">Paid</strong>
-    {{else if eq .Status "pending_payment"}}<strong style="color:var(--gold);">Awaiting payment</strong>
-    {{else if eq .Status "payment_failed"}}<strong style="color:var(--clay);">Payment failed</strong>
+    {{if eq .Status "paid"}}<strong style="color:var(--ok);">Paid</strong>
+    {{else if eq .Status "pending_payment"}}<strong style="color:var(--warn);">Awaiting payment</strong>
+    {{else if eq .Status "payment_failed"}}<strong style="color:var(--bad);">Payment failed</strong>
     {{else}}<strong>{{.Status}}</strong>{{end}}
   </div>
   <ul>

@@ -24,6 +24,13 @@ func (a *App) handleRegisterPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The checkbox is `required` in the form, but that is only a browser
+	// check - enforce it here too.
+	if r.FormValue("agree_terms") != "on" {
+		render(w, "register.html", map[string]string{"Error": "You need to agree to the Terms and Conditions to create an account."})
+		return
+	}
+
 	a.store.mu.Lock()
 	for _, u := range a.store.Users {
 		if u.Email == email {
@@ -32,15 +39,17 @@ func (a *App) handleRegisterPost(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	now := time.Now()
 	user := &User{
-		ID:           newID(),
-		Name:         name,
-		Email:        email,
-		Phone:        phone,
-		PasswordHash: hashPassword(password),
-		Role:         "buyer",
-		SellerStatus: "",
-		CreatedAt:    time.Now(),
+		ID:              newID(),
+		Name:            name,
+		Email:           email,
+		Phone:           phone,
+		PasswordHash:    hashPassword(password),
+		Role:            "buyer",
+		SellerStatus:    "",
+		CreatedAt:       now,
+		TermsAcceptedAt: now,
 	}
 	a.store.Users[user.ID] = user
 	a.store.save()
@@ -48,6 +57,10 @@ func (a *App) handleRegisterPost(w http.ResponseWriter, r *http.Request) {
 
 	a.startSession(w, user.ID)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (a *App) handleTerms(w http.ResponseWriter, r *http.Request) {
+	render(w, "terms.html", map[string]any{"User": a.currentUser(r)})
 }
 
 func (a *App) handleLoginGet(w http.ResponseWriter, r *http.Request) {

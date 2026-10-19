@@ -1,9 +1,9 @@
 {{define "layout_bottom"}}
 </main>
+<footer class="site-footer"><a href="/terms">Terms and Conditions</a></footer>
 <script>
   // Close any open nav dropdown when clicking outside it - <details>
-  // doesn't do this natively, and clicking a link inside it should also
-  // close it before navigating so it doesn't stay open on the next page.
+  // doesn't do this natively.
   document.addEventListener('click', function (e) {
     document.querySelectorAll('.nav-dropdown[open]').forEach(function (menu) {
       if (!menu.contains(e.target)) {
@@ -11,8 +11,48 @@
       }
     });
   });
+
+  // Light/dark switch. The initial theme is set by the script in <head>
+  // (saved choice, otherwise the device setting); this just flips it and
+  // remembers the choice.
+  (function () {
+    var btn = document.querySelector('.theme-toggle');
+    if (!btn) return;
+    function label() {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      btn.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    }
+    btn.addEventListener('click', function () {
+      var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+      var next = dark ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      try { localStorage.setItem('kaya-theme', next); } catch (e) {}
+      label();
+    });
+    label();
+  })();
+
+  // Show/hide button on every password field.
+  document.querySelectorAll('input[type="password"]').forEach(function (input) {
+    var wrap = document.createElement('div');
+    wrap.className = 'pw-field';
+    input.parentNode.insertBefore(wrap, input);
+    wrap.appendChild(input);
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'pw-toggle';
+    btn.textContent = 'Show';
+    btn.setAttribute('aria-label', 'Show password');
+    btn.addEventListener('click', function () {
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      btn.textContent = show ? 'Hide' : 'Show';
+      btn.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    });
+    wrap.appendChild(btn);
+  });
 </script>
 </body>
 </html>
 {{end}}
-

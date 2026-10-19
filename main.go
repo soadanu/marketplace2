@@ -43,6 +43,7 @@ func main() {
 	mux.HandleFunc("/register", methodSplit(app.handleRegisterGet, app.handleRegisterPost))
 	mux.HandleFunc("/login", methodSplit(app.handleLoginGet, app.handleLoginPost))
 	mux.HandleFunc("/logout", app.handleLogout)
+	mux.HandleFunc("/terms", app.handleTerms)
 	mux.HandleFunc("/forgot-password", methodSplit(app.handleForgotPasswordGet, app.handleForgotPasswordPost))
 	mux.HandleFunc("/reset-password", methodSplit(app.handleResetPasswordGet, app.handleResetPasswordPost))
 

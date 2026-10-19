@@ -11,6 +11,9 @@ type User struct {
 	Role         string    `json:"role"`          // "buyer", "seller", "admin"
 	SellerStatus string    `json:"seller_status"` // "", "pending", "approved", "rejected"
 	CreatedAt    time.Time `json:"created_at"`
+	// When they ticked "I agree to the Terms and Conditions" at sign-up.
+	// Zero for accounts created before the checkbox existed.
+	TermsAcceptedAt time.Time `json:"terms_accepted_at"`
 
 	// Payout details - only relevant once SellerStatus == "approved".
 	// FlutterwaveSubaccountID being non-empty means Flutterwave will

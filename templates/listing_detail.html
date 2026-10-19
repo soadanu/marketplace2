@@ -8,7 +8,7 @@
     <div style="display:flex;gap:8px;margin-top:8px;overflow-x:auto;">
       {{range .Listing.ImagePaths}}
       <img src="/uploads/listings/{{basename .}}" onclick="document.getElementById('main-listing-image').src=this.src"
-           style="width:60px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0;border:1px solid #D8CDB6;">
+           style="width:60px;height:60px;object-fit:cover;border-radius:4px;cursor:pointer;flex-shrink:0;border:1px solid var(--border);">
       {{end}}
     </div>
     {{end}}

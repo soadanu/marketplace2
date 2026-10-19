@@ -5,20 +5,68 @@
   <meta charset="utf-8">
   <title>Kaya Marketplace</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('kaya-theme'); } catch (e) {}
+      if (t !== 'dark' && t !== 'light') {
+        t = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      }
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      color-scheme: light;
+      /* brand colors - identical in both themes */
       --indigo: #1B2A4A;
       --indigo-deep: #142038;
       --gold: #D9A441;
       --palm: #0B6E4F;
       --palm-deep: #08573F;
-      --paper: #F3ECDD;
-      --ink: #201B14;
       --clay: #B5453A;
-      --cream: #FBF7EE;
+      --cream: #FBF7EE; /* light text on the indigo header/hero */
+
+      /* themed tokens - these are what the dark theme overrides */
+      --paper: #F3ECDD;   /* page background */
+      --surface: #FBF7EE; /* cards, menu panel, search bar */
+      --ink: #201B14;     /* body text */
+      --heading: #1B2A4A; /* labels, table headers, section headings */
+      --muted: #7A7264;
+      --border: #D8CDB6;
+      --divider: #E5DBC6;
+      --input-bg: #FFFFFF;
+      --shadow: rgba(27,42,74,0.1);
+      --ok: #08573F;
+      --warn: #96660A;
+      --bad: #B5453A;
+      --err-bg: #FBE6E2; --err-text: #7A281F; --err-border: #EBC3BA;
+      --info-bg: #E4F1EA; --info-text: #08573F; --info-border: #C6E2D2;
+      --btn-secondary: #6B6152;
+      --stripe-a: #E4D9BE; --stripe-b: #EFE6D2;
+    }
+    [data-theme="dark"] {
+      color-scheme: dark;
+      --paper: #0F1420;
+      --surface: #182033;
+      --ink: #EAE6DC;
+      --heading: #D5DCEB;
+      --muted: #A1AABB;
+      --border: #2E3955;
+      --divider: #27314A;
+      --input-bg: #0F1420;
+      --shadow: rgba(0,0,0,0.5);
+      --ok: #4FD1A0;
+      --warn: #E5B454;
+      --bad: #F0877B;
+      --err-bg: #3A1D1F; --err-text: #F5B5AD; --err-border: #6B2F2F;
+      --info-bg: #14302A; --info-text: #8FE3C2; --info-border: #1F5A47;
+      --btn-secondary: #4A5575;
+      --stripe-a: #232C42; --stripe-b: #1D2538;
     }
     * { box-sizing: border-box; }
     body {
@@ -74,24 +122,24 @@
     .nav-dropdown[open] summary::after { content: '▴'; }
     .nav-dropdown .dropdown-panel {
       position: absolute; top: calc(100% + 10px); left: 0;
-      background: var(--cream); border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+      background: var(--surface); border-radius: 6px; box-shadow: 0 8px 20px rgba(0,0,0,0.25);
       min-width: 200px; padding: 6px 0; z-index: 20;
     }
     .nav-dropdown .dropdown-panel a {
       display: block; padding: 10px 16px; color: var(--ink) !important;
       font-size: 14px; text-decoration: none;
     }
-    .nav-dropdown .dropdown-panel a:hover { background: var(--paper); color: var(--palm-deep) !important; }
-    .nav-dropdown .dropdown-panel .divider { border-top: 1px solid #E5DBC6; margin: 6px 0; }
+    .nav-dropdown .dropdown-panel a:hover { background: var(--paper); color: var(--ok) !important; }
+    .nav-dropdown .dropdown-panel .divider { border-top: 1px solid var(--divider); margin: 6px 0; }
 
     /* --- Generic components (used across secondary pages) --- */
-    .card { background: var(--cream); border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px rgba(27,42,74,0.1); margin-top: 24px; }
+    .card { background: var(--surface); border-radius: 6px; padding: 20px; box-shadow: 0 1px 3px var(--shadow); margin-top: 24px; }
     form.inline { display: inline; }
-    label { font-size: 13px; font-weight: 600; color: var(--indigo); }
+    label { font-size: 13px; font-weight: 600; color: var(--heading); }
     input, select, textarea {
       width: 100%; padding: 10px; margin: 6px 0 14px;
-      border: 1px solid #D8CDB6; border-radius: 5px; font-size: 14px;
-      font-family: inherit; background: #fff; color: var(--ink);
+      border: 1px solid var(--border); border-radius: 5px; font-size: 14px;
+      font-family: inherit; background: var(--input-bg); color: var(--ink);
     }
     button, .btn {
       background: var(--palm); color: #fff; border: none; padding: 10px 18px;
@@ -99,15 +147,44 @@
       display: inline-block; font-weight: 600; transition: background 0.15s ease;
     }
     button:hover, .btn:hover { background: var(--palm-deep); }
-    button.secondary, .btn.secondary { background: #6B6152; }
+    button.secondary, .btn.secondary { background: var(--btn-secondary); }
     button.danger, .btn.danger { background: var(--clay); }
-    .error { background: #FBE6E2; color: #7A281F; padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid #EBC3BA; }
-    .info { background: #E4F1EA; color: var(--palm-deep); padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid #C6E2D2; }
+    .error { background: var(--err-bg); color: var(--err-text); padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid var(--err-border); }
+    .info { background: var(--info-bg); color: var(--info-text); padding: 12px; border-radius: 5px; margin-bottom: 14px; border: 1px solid var(--info-border); }
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #E5DBC6; }
-    th { color: var(--indigo); font-size: 13px; }
-    .muted { color: #7A7264; font-size: 13px; }
-    .price { color: var(--palm-deep); font-weight: 700; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--divider); }
+    th { color: var(--heading); font-size: 13px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .price { color: var(--ok); font-weight: 700; }
+
+    /* --- Terms checkbox (the global input rule would otherwise stretch it to full width) --- */
+    input[type="checkbox"] { width: auto; margin: 0; padding: 0; accent-color: var(--palm); }
+    .check { display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 16px; font-weight: 400; color: var(--ink); line-height: 1.4; }
+    .check input { margin-top: 2px; flex-shrink: 0; }
+
+    /* --- Show/hide password toggle (added by the script in layout_bottom) --- */
+    .pw-field { position: relative; margin: 6px 0 14px; }
+    .pw-field input { margin: 0; padding-right: 64px; }
+    .pw-toggle, .pw-toggle:hover {
+      position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+      background: transparent; color: var(--muted); padding: 6px 10px; font-size: 12px; font-weight: 600;
+    }
+    .pw-toggle:hover { color: var(--ok); }
+
+    /* --- Light/dark toggle in the header --- */
+    .theme-toggle, .theme-toggle:hover {
+      background: transparent; color: var(--cream); border: 1px solid rgba(251,247,238,0.35);
+      width: 34px; height: 34px; padding: 0; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      margin-right: 14px; vertical-align: middle;
+    }
+    .theme-toggle:hover { background: rgba(251,247,238,0.14); }
+    .theme-toggle .icon-sun { display: none; }
+    [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
+    [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
+
+    .site-footer { text-align: center; padding: 8px 24px 32px; font-size: 13px; color: var(--muted); }
+    .site-footer a { color: var(--muted); }
   </style>
 </head>
 <body>
@@ -146,6 +223,10 @@
     </nav>
   </div>
   <div class="header-right">
+    <button type="button" class="theme-toggle" aria-label="Switch to dark mode" title="Switch between light and dark mode">
+      <svg class="icon-moon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+      <svg class="icon-sun" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+    </button>
     {{if .User}}
       <span style="margin-right:14px;">Hi, {{.User.Name}}</span>
       <a href="/logout">Logout</a>
