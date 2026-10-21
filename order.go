@@ -52,6 +52,15 @@ func writeCart(w http.ResponseWriter, c cart) {
 // other buyers until this order is actually confirmed paid (see
 // applyVerifiedTransaction in payment.go, the only place stock changes).
 func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) {
+	if r.Method != http.MethodPost {
+		a.renderBuyNowPage(w, r, buyer, shippingFromUser(buyer), "")
+		return
+	}
+	ship, shipMsg := parseShipping(r)
+	if shipMsg != "" {
+		a.renderBuyNowPage(w, r, buyer, ship, shipMsg)
+		return
+	}
 	listingID := r.FormValue("listing_id")
 	qty, err := strconv.Atoi(r.FormValue("qty"))
 	if err != nil || qty < 1 {
@@ -66,7 +75,7 @@ func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) 
 		return
 	}
 	seller, ok := a.store.Users[l.SellerID]
-	if !ok || (a.payments.Configured() && seller.FlutterwaveSubaccountID == "") {
+	if !ok || seller.Suspended || (a.payments.Configured() && seller.FlutterwaveSubaccountID == "") {
 		a.store.mu.Unlock()
 		http.Redirect(w, r, "/listing?id="+listingID, http.StatusSeeOther)
 		return
@@ -92,9 +101,11 @@ func (a *App) handleBuyNow(w http.ResponseWriter, r *http.Request, buyer *User) 
 		}},
 		CreatedAt: time.Now(),
 	}
+	order.setShipping(ship)
 	a.store.Orders[order.ID] = order
 	a.store.save()
 	a.store.mu.Unlock()
+	a.saveShippingToProfile(buyer, ship)
 
 	if !a.payments.Configured() {
 		a.finalizeOrderPaid(order, "dev-mode")
@@ -174,6 +185,11 @@ func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User
 		http.Redirect(w, r, "/cart", http.StatusSeeOther)
 		return
 	}
+	ship, shipMsg := parseShipping(r)
+	if shipMsg != "" {
+		a.renderCheckoutFromCart(w, r, buyer, ship, shipMsg)
+		return
+	}
 	commission := platformCommissionRate()
 
 	a.store.mu.Lock()
@@ -187,7 +203,7 @@ func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User
 			continue
 		}
 		seller, ok := a.store.Users[l.SellerID]
-		if !ok {
+		if !ok || seller.Suspended {
 			skipped++
 			continue
 		}
@@ -235,11 +251,13 @@ func (a *App) handleCheckout(w http.ResponseWriter, r *http.Request, buyer *User
 			Items:            items,
 			CreatedAt:        time.Now(),
 		}
+		order.setShipping(ship)
 		a.store.Orders[order.ID] = order
 		orders = append(orders, order)
 	}
 	a.store.save()
 	a.store.mu.Unlock()
+	a.saveShippingToProfile(buyer, ship)
 
 	writeCart(w, remainingCart) // items we could process are gone from the cart; skipped ones stay
 
@@ -337,10 +355,20 @@ func (a *App) handleOrdersGet(w http.ResponseWriter, r *http.Request, buyer *Use
 	a.store.mu.RUnlock()
 	sort.Slice(mine, func(i, j int) bool { return mine[i].CreatedAt.After(mine[j].CreatedAt) })
 
+	reviewed := map[string]bool{}
+	a.store.mu.RLock()
+	for _, rv := range a.store.Reviews {
+		if rv.BuyerID == buyer.ID {
+			reviewed[rv.OrderID] = true
+		}
+	}
+	a.store.mu.RUnlock()
+
 	render(w, "orders.html", map[string]any{
 		"Orders":             mine,
 		"SellerNames":        sellerNames,
 		"PaymentsConfigured": a.payments.Configured(),
+		"Reviewed":           reviewed,
 		"User":               buyer,
 	})
 }

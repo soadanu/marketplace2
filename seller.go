@@ -79,10 +79,12 @@ func (a *App) handleAdminDashboard(w http.ResponseWriter, r *http.Request, admin
 	sort.Slice(pending, func(i, j int) bool { return pending[i].SubmittedAt.Before(pending[j].SubmittedAt) })
 
 	render(w, "admin.html", map[string]any{
-		"Applications": pending,
-		"Applicants":   applicants,
-		"Categories":   a.sortedCategories(),
-		"User":         admin,
+		"Applications":    pending,
+		"Applicants":      applicants,
+		"Counts":          a.adminCounts(),
+		"DefaultPassword": a.hasDefaultPassword(admin),
+		"Categories":      a.sortedCategories(),
+		"User":            admin,
 	})
 }
 

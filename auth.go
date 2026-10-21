@@ -67,9 +67,19 @@ func (a *App) handleLoginGet(w http.ResponseWriter, r *http.Request) {
 	render(w, "login.html", nil)
 }
 
+// dummyHash lets a login attempt for an unknown email cost the same time as
+// a real one, so response timing doesn't reveal which emails are registered.
+var dummyHash = hashPassword("not-a-real-password")
+
 func (a *App) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 	password := r.FormValue("password")
+	ip := clientIP(r)
+
+	if a.loginBlocked(email, ip) {
+		render(w, "login.html", map[string]string{"Error": "Too many failed attempts. Please wait about 15 minutes and try again, or use \"Forgot password\"."})
+		return
+	}
 
 	a.store.mu.RLock()
 	var found *User
@@ -79,14 +89,24 @@ func (a *App) handleLoginPost(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
+	hash, userID, suspended := dummyHash, "", false
+	if found != nil {
+		hash, userID, suspended = found.PasswordHash, found.ID, found.Suspended
+	}
 	a.store.mu.RUnlock()
 
-	if found == nil || !verifyPassword(password, found.PasswordHash) {
+	if !verifyPassword(password, hash) || found == nil {
+		a.loginFailed(email, ip)
 		render(w, "login.html", map[string]string{"Error": "Invalid email or password."})
 		return
 	}
+	if suspended {
+		render(w, "login.html", map[string]string{"Error": "This account has been suspended."})
+		return
+	}
 
-	a.startSession(w, found.ID)
+	a.clearLoginFailures(email)
+	a.startSession(w, userID)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -103,9 +123,16 @@ func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) startSession(w http.ResponseWriter, userID string) {
 	token := newToken()
-	sess := &Session{Token: token, UserID: userID, ExpiresAt: time.Now().Add(sessionDuration)}
+	now := time.Now()
+	sess := &Session{Token: token, UserID: userID, ExpiresAt: now.Add(sessionDuration)}
 
 	a.store.mu.Lock()
+	// Housekeeping: forget sessions that have expired.
+	for t, old := range a.store.Sessions {
+		if now.After(old.ExpiresAt) {
+			delete(a.store.Sessions, t)
+		}
+	}
 	a.store.Sessions[token] = sess
 	a.store.save()
 	a.store.mu.Unlock()
@@ -116,6 +143,8 @@ func (a *App) startSession(w http.ResponseWriter, userID string) {
 		Path:     "/",
 		Expires:  sess.ExpiresAt,
 		HttpOnly: true,
+		// Only sent over HTTPS once the site has a public https URL.
+		Secure:   strings.HasPrefix(a.payments.BaseURL, "https://"),
 		SameSite: http.SameSiteLaxMode,
 	})
 }
@@ -133,7 +162,11 @@ func (a *App) currentUser(r *http.Request) *User {
 	if !ok || time.Now().After(sess.ExpiresAt) {
 		return nil
 	}
-	return a.store.Users[sess.UserID]
+	u := a.store.Users[sess.UserID]
+	if u == nil || u.Suspended {
+		return nil
+	}
+	return u
 }
 
 // requireLogin wraps a handler so it redirects to /login when no session exists.

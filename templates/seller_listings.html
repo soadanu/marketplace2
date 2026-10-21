@@ -2,6 +2,7 @@
 {{template "layout_top" .}}
 
 <h2>Your listings</h2>
+<p><a href="/seller/orders" class="btn secondary">My sales &amp; orders to ship</a></p>
 
 {{if not .User.FlutterwaveSubaccountID}}
 <div class="error">
@@ -43,6 +44,7 @@
     <td>{{.Status}}</td>
     <td>
       {{if ne .Status "removed"}}
+      <a href="/seller/listings/edit?id={{.ID}}" class="btn secondary">Edit</a>
       <form class="inline" method="post" action="/seller/listings/remove">
         <input type="hidden" name="id" value="{{.ID}}">
         <button type="submit" class="danger">Remove</button>

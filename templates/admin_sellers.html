@@ -22,7 +22,7 @@
       {{else if eq .User.SellerStatus "rejected"}}<strong style="color:var(--bad);">Rejected</strong>
       {{else}}—{{end}}
     </td>
-    <td>{{if .Application}}{{.Application.NIN}}{{else}}—{{end}}</td>
+    <td>{{if .Application}}{{.Application.NIN}}{{if .Application.NINDocPath}}<br><a href="/admin/kyc?id={{.Application.ID}}" target="_blank" rel="noopener">View ID photo</a>{{end}}{{else}}—{{end}}</td>
     <td>{{.ListingCount}}</td>
     <td>
       {{if .PayoutReady}}

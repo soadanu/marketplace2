@@ -90,6 +90,7 @@ func (a *App) handleChatView(w http.ResponseWriter, r *http.Request, user *User)
 		http.Redirect(w, r, "/inbox", http.StatusSeeOther)
 		return
 	}
+	a.markRead(conv, user, true)
 
 	a.store.mu.RLock()
 	msgs := make([]*Message, 0)
@@ -121,6 +122,10 @@ func (a *App) handleChatView(w http.ResponseWriter, r *http.Request, user *User)
 	a.store.mu.RUnlock()
 
 	sort.Slice(msgs, func(i, j int) bool { return msgs[i].CreatedAt.Before(msgs[j].CreatedAt) })
+	lastTS := ""
+	if len(msgs) > 0 {
+		lastTS = msgs[len(msgs)-1].CreatedAt.Format(time.RFC3339Nano)
+	}
 
 	views := make([]chatMessageView, 0, len(msgs))
 	for _, m := range msgs {
@@ -130,6 +135,7 @@ func (a *App) handleChatView(w http.ResponseWriter, r *http.Request, user *User)
 	render(w, "chat_view.html", map[string]any{
 		"Conversation": conv,
 		"Messages":     views,
+		"LastTS":       lastTS,
 		"OtherName":    otherName,
 		"Listing":      listing,
 		"User":         user,
@@ -143,7 +149,7 @@ func (a *App) handleChatSend(w http.ResponseWriter, r *http.Request, user *User)
 
 	a.store.mu.Lock()
 	conv, ok := a.store.Conversations[id]
-	if !ok || !canAccessConversation(conv, user) || body == "" {
+	if !ok || !canAccessConversation(conv, user) || body == "" || len(body) > 2000 {
 		a.store.mu.Unlock()
 		http.Redirect(w, r, "/inbox", http.StatusSeeOther)
 		return
@@ -156,6 +162,7 @@ func (a *App) handleChatSend(w http.ResponseWriter, r *http.Request, user *User)
 		CreatedAt:      time.Now(),
 	}
 	a.store.Messages[msg.ID] = msg
+	markReadLocked(conv, user, msg.CreatedAt) // you've obviously seen your own reply
 	a.store.save()
 	a.store.mu.Unlock()
 
@@ -168,6 +175,7 @@ type conversationSummary struct {
 	LastMessage  string
 	LastAt       time.Time
 	IsSupport    bool
+	Unread       bool
 }
 
 // handleInbox lists every conversation the current user is part of, either
@@ -206,6 +214,7 @@ func (a *App) handleInbox(w http.ResponseWriter, r *http.Request, user *User) {
 			sum.LastMessage = lastMsg.Body
 			sum.LastAt = lastMsg.CreatedAt
 		}
+		sum.Unread = isUnread(c, lastMsg, user)
 		summaries = append(summaries, sum)
 	}
 	a.store.mu.RUnlock()
@@ -245,6 +254,7 @@ func (a *App) handleAdminSupport(w http.ResponseWriter, r *http.Request, admin *
 			sum.LastMessage = lastMsg.Body
 			sum.LastAt = lastMsg.CreatedAt
 		}
+		sum.Unread = isUnread(c, lastMsg, admin)
 		summaries = append(summaries, sum)
 	}
 	a.store.mu.RUnlock()

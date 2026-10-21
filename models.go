@@ -15,6 +15,15 @@ type User struct {
 	// Zero for accounts created before the checkbox existed.
 	TermsAcceptedAt time.Time `json:"terms_accepted_at"`
 
+	// Suspended accounts can't log in, and their listings are hidden.
+	Suspended bool `json:"suspended"`
+
+	// Saved delivery details, prefilled at checkout (see shipping.go).
+	ShipName    string `json:"ship_name"`
+	ShipAddress string `json:"ship_address"`
+	ShipCity    string `json:"ship_city"`
+	ShipState   string `json:"ship_state"`
+
 	// Payout details - only relevant once SellerStatus == "approved".
 	// FlutterwaveSubaccountID being non-empty means Flutterwave will
 	// automatically settle this seller's share of every sale straight to
@@ -78,6 +87,11 @@ type Conversation struct {
 	SellerID  string    `json:"seller_id"` // "support" for the general customer care thread
 	ListingID string    `json:"listing_id"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// Last time each side opened (or replied in) the thread - drives the
+	// unread badge. For support threads the "seller" side is support staff.
+	BuyerReadAt  time.Time `json:"buyer_read_at"`
+	SellerReadAt time.Time `json:"seller_read_at"`
 }
 
 type Message struct {
@@ -101,6 +115,26 @@ type Order struct {
 	Items            []OrderItem `json:"items"`
 	OversoldWarning  string      `json:"oversold_warning,omitempty"` // set if stock ran out between order and confirmed payment - needs manual admin follow-up
 	CreatedAt        time.Time   `json:"created_at"`
+
+	// Where to send it. A copy taken at checkout, so later address changes
+	// never alter past orders. Only shown to the seller once paid.
+	ShipName    string `json:"ship_name"`
+	ShipPhone   string `json:"ship_phone"`
+	ShipAddress string `json:"ship_address"`
+	ShipCity    string `json:"ship_city"`
+	ShipState   string `json:"ship_state"`
+
+	TrackingNote string    `json:"tracking_note,omitempty"` // courier / waybill note from the seller
+	ShippedAt    time.Time `json:"shipped_at"`
+	DeliveredAt  time.Time `json:"delivered_at"`
+}
+
+// IsPaid is true once payment has been confirmed, whatever happened to the
+// order afterwards (shipped, delivered). Payment code must use this rather
+// than comparing Status to "paid", or a late duplicate webhook would treat a
+// shipped order as unpaid and take its stock off a second time.
+func (o *Order) IsPaid() bool {
+	return o.Status == "paid" || o.Status == "shipped" || o.Status == "delivered"
 }
 
 type OrderItem struct {
@@ -109,4 +143,36 @@ type OrderItem struct {
 	Title     string `json:"title"`
 	Quantity  int    `json:"quantity"`
 	PriceKobo int    `json:"price_kobo"` // price at time of purchase
+}
+
+// Review is a buyer's rating of a seller, tied to one delivered order.
+type Review struct {
+	ID        string    `json:"id"`
+	OrderID   string    `json:"order_id"`
+	BuyerID   string    `json:"buyer_id"`
+	SellerID  string    `json:"seller_id"`
+	Rating    int       `json:"rating"` // 1-5
+	Comment   string    `json:"comment"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// Report is a user flagging a listing or seller for the admins to look at.
+type Report struct {
+	ID         string    `json:"id"`
+	ReporterID string    `json:"reporter_id"`
+	ListingID  string    `json:"listing_id"` // empty when reporting a seller directly
+	SellerID   string    `json:"seller_id"`
+	Reason     string    `json:"reason"`
+	Details    string    `json:"details"`
+	Status     string    `json:"status"` // "open", "resolved"
+	CreatedAt  time.Time `json:"created_at"`
+	ResolvedBy string    `json:"resolved_by,omitempty"`
+	ResolvedAt time.Time `json:"resolved_at"`
+}
+
+// Favorite is a listing a user saved. Stored under the key "userID|listingID".
+type Favorite struct {
+	UserID    string    `json:"user_id"`
+	ListingID string    `json:"listing_id"`
+	CreatedAt time.Time `json:"created_at"`
 }

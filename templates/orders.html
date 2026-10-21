@@ -5,19 +5,52 @@
 {{if not .Orders}}<p class="muted">No orders yet.</p>{{end}}
 {{$sellerNames := .SellerNames}}
 {{$paymentsLive := .PaymentsConfigured}}
+{{$reviewed := .Reviewed}}
 {{range .Orders}}
 <div class="card" style="margin-bottom:16px;">
   <div class="muted">
-    {{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Sold by {{index $sellerNames .SellerID}} &middot; Status:
-    {{if eq .Status "paid"}}<strong style="color:var(--ok);">Paid</strong>
-    {{else if eq .Status "pending_payment"}}<strong style="color:var(--warn);">Awaiting payment</strong>
-    {{else if eq .Status "payment_failed"}}<strong style="color:var(--bad);">Payment failed</strong>
-    {{else}}<strong>{{.Status}}</strong>{{end}}
+    {{.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; Sold by <a href="/shop?id={{.SellerID}}">{{index $sellerNames .SellerID}}</a> &middot;
+    {{if eq .Status "paid"}}<span class="tag tag-ok">Paid &mdash; waiting for the seller to ship</span>
+    {{else if eq .Status "shipped"}}<span class="tag tag-ok">Shipped</span>
+    {{else if eq .Status "delivered"}}<span class="tag tag-ok">Delivered</span>
+    {{else if eq .Status "pending_payment"}}<span class="tag">Awaiting payment</span>
+    {{else if eq .Status "payment_failed"}}<span class="tag tag-warn">Payment failed</span>
+    {{else}}<span class="tag">{{.Status}}</span>{{end}}
   </div>
   <ul>
-    {{range .Items}}<li>{{.Title}} &times; {{.Quantity}} — {{naira .PriceKobo}} each</li>{{end}}
+    {{range .Items}}<li>{{.Title}} &times; {{.Quantity}} &mdash; {{naira .PriceKobo}} each</li>{{end}}
   </ul>
   <strong>Total: {{naira .TotalKobo}}</strong>
+  {{if .ShipAddress}}<p class="muted" style="margin:8px 0 0;">Delivering to {{.ShipName}}, {{.ShipAddress}}, {{.ShipCity}}, {{.ShipState}}</p>{{end}}
+
+  {{if eq .Status "shipped"}}
+    <p class="muted">Shipped {{.ShippedAt.Format "Jan 2, 3:04 PM"}}{{if .TrackingNote}} &middot; {{.TrackingNote}}{{end}}.</p>
+    <form method="post" action="/orders/received">
+      <input type="hidden" name="id" value="{{.ID}}">
+      <button type="submit">I've received this</button>
+    </form>
+  {{end}}
+
+  {{if eq .Status "delivered"}}
+    {{if index $reviewed .ID}}
+      <p class="muted">Thanks for rating this seller.</p>
+    {{else}}
+    <form method="post" action="/reviews/create" style="margin-top:10px;">
+      <input type="hidden" name="order_id" value="{{.ID}}">
+      <label for="rating-{{.ID}}">Rate this seller</label>
+      <select id="rating-{{.ID}}" name="rating" required style="max-width:220px;">
+        <option value="5">★★★★★ Excellent</option>
+        <option value="4">★★★★☆ Good</option>
+        <option value="3">★★★☆☆ Okay</option>
+        <option value="2">★★☆☆☆ Poor</option>
+        <option value="1">★☆☆☆☆ Terrible</option>
+      </select>
+      <input type="text" name="comment" maxlength="500" placeholder="Say a little about it (optional)">
+      <button type="submit" class="secondary">Submit review</button>
+    </form>
+    {{end}}
+  {{end}}
+
   {{if and (eq .Status "pending_payment") $paymentsLive}}
   <div style="margin-top:10px;">
     <form method="post" action="/orders/recheck?id={{.ID}}" style="display:inline;">
@@ -30,7 +63,7 @@
   <p class="muted" style="margin-top:6px;">If you already paid (especially by bank transfer), click "Check status" first - transfers can take a moment for Flutterwave to confirm. Only use "Pay now" if you haven't actually completed payment, to avoid paying twice.</p>
   {{end}}
   {{if eq .Status "payment_failed"}}
-  <p class="muted" style="margin-top:8px;">This payment may not have gone through - the items were released back to stock.</p>
+  <p class="muted" style="margin-top:8px;">This payment may not have gone through.</p>
   {{if $paymentsLive}}
   <form method="post" action="/orders/recheck?id={{.ID}}">
     <button type="submit" class="secondary">Recheck with Flutterwave</button>

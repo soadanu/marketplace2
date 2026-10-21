@@ -18,6 +18,15 @@ func (a *App) handleForgotPasswordGet(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleForgotPasswordPost(w http.ResponseWriter, r *http.Request) {
 	email := strings.ToLower(strings.TrimSpace(r.FormValue("email")))
 
+	// Throttle so this page can't be used to flood someone's inbox. The reply
+	// is the same neutral message either way.
+	ip := clientIP(r)
+	if a.resetLimited(email, ip) {
+		render(w, "forgot_password.html", map[string]string{"Info": resetRequestedMessage})
+		return
+	}
+	a.recordReset(email, ip)
+
 	a.store.mu.Lock()
 	var user *User
 	for _, u := range a.store.Users {
@@ -31,7 +40,7 @@ func (a *App) handleForgotPasswordPost(w http.ResponseWriter, r *http.Request) {
 	// so this endpoint can't be used to check which emails are registered.
 	if user == nil {
 		a.store.mu.Unlock()
-		render(w, "forgot_password.html", map[string]string{"Info": "If that email is registered, a reset link has been generated."})
+		render(w, "forgot_password.html", map[string]string{"Info": resetRequestedMessage})
 		return
 	}
 
@@ -53,13 +62,26 @@ func (a *App) handleForgotPasswordPost(w http.ResponseWriter, r *http.Request) {
 			"Click this link to set a new password - it expires in 30 minutes:\n"+link+"\n\n"+
 			"If you didn't request this, you can safely ignore this email.")
 
-	info := map[string]string{"Info": "If that email is registered, a reset link has been sent to it."}
-	if !a.email.Configured() {
-		// Dev mode only - no mailer configured, so show the link on screen
-		// since it's only visible in the server console otherwise.
+	info := map[string]string{"Info": resetRequestedMessage}
+	if a.isLocalDev() {
+		// Local development only: no mailer and no public URL configured, so
+		// show the link on screen. NEVER do this on a live site - anyone could
+		// then reset any account's password just by knowing its email. Live
+		// without SMTP, the link goes to the server log only (see sendEmail).
 		info["DevLink"] = link
 	}
 	render(w, "forgot_password.html", info)
+}
+
+// resetRequestedMessage is shown whether or not the email is registered, so
+// this page can't be used to find out who has an account.
+const resetRequestedMessage = "If that email is registered, a password reset link has been sent to it."
+
+// isLocalDev reports whether the app is running on a developer's machine:
+// no SMTP configured and no public URL set. A deployed site always has
+// APP_BASE_URL (payments need it), so it is never treated as local.
+func (a *App) isLocalDev() bool {
+	return !a.email.Configured() && a.payments.BaseURL == ""
 }
 
 func (a *App) handleResetPasswordGet(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +114,7 @@ func (a *App) handleResetPasswordPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	user.PasswordHash = hashPassword(password)
+	a.clearLoginFailures(user.Email) // a successful reset also lifts any login lockout
 	reset.Used = true
 
 	// Invalidate all existing sessions for this user - a password reset

@@ -1,0 +1,13 @@
+{{define "favorites.html"}}
+{{template "layout_top" .}}
+
+<h2>Saved items</h2>
+{{if .Listings}}
+<div class="stall-grid">{{range .Listings}}{{template "listing_card" .}}{{end}}</div>
+{{else}}
+<p class="muted">Nothing saved yet. Tap "Save for later" on any item to keep it here.</p>
+{{end}}
+
+{{template "listing_card_styles"}}
+{{template "layout_bottom" .}}
+{{end}}

@@ -1,0 +1,27 @@
+{{define "report.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:520px;">
+  {{if .Done}}
+    <h2>Thanks</h2>
+    <div class="info">We've received your report about {{.Target}}. The Kaya team will look into it.</div>
+    <a href="/" class="btn">Back to the market</a>
+  {{else}}
+    <h2>Report</h2>
+    <p class="muted">You're reporting {{.Target}}. Reports go to the Kaya team, not to the seller.</p>
+    <form method="post" action="/report">
+      <input type="hidden" name="listing_id" value="{{.ListingID}}">
+      <input type="hidden" name="seller_id" value="{{.SellerID}}">
+      <label for="reason">What's wrong?</label>
+      <select id="reason" name="reason" required>
+        {{range .Reasons}}<option value="{{.}}">{{.}}</option>{{end}}
+      </select>
+      <label for="details">Details <span class="muted">(optional)</span></label>
+      <textarea id="details" name="details" rows="4" maxlength="500"></textarea>
+      <button type="submit">Send report</button>
+    </form>
+  {{end}}
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

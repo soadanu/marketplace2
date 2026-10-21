@@ -1,0 +1,34 @@
+{{define "admin_users.html"}}
+{{template "layout_top" .}}
+
+<h2>Users</h2>
+<p class="muted">Suspending an account signs the person out, blocks login, and hides their listings. You can reinstate them at any time. Admin accounts can't be suspended.</p>
+<div style="overflow-x:auto;">
+<table>
+  <tr><th>Name</th><th>Email</th><th>Role</th><th>Joined</th><th>Status</th><th></th></tr>
+  {{range .Users}}
+  <tr>
+    <td>{{.Name}}</td>
+    <td>{{.Email}}<br><span class="muted">{{.Phone}}</span></td>
+    <td>{{.Role}}{{if eq .SellerStatus "approved"}} &middot; seller{{end}}</td>
+    <td>{{.CreatedAt.Format "Jan 2, 2006"}}</td>
+    <td>{{if .Suspended}}<span class="tag tag-warn">suspended</span>{{else}}<span class="tag tag-ok">active</span>{{end}}</td>
+    <td>
+      {{if ne .Role "admin"}}
+      <form class="inline" method="post" action="/admin/users/suspend">
+        <input type="hidden" name="id" value="{{.ID}}">
+        {{if .Suspended}}
+          <input type="hidden" name="action" value="unsuspend"><button type="submit" class="secondary">Reinstate</button>
+        {{else}}
+          <input type="hidden" name="action" value="suspend"><button type="submit" class="danger">Suspend</button>
+        {{end}}
+      </form>
+      {{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

@@ -21,6 +21,9 @@ type dbSnapshot struct {
 	Orders        map[string]*Order             `json:"orders"`
 	Conversations map[string]*Conversation      `json:"conversations"`
 	Messages      map[string]*Message           `json:"messages"`
+	Reviews       map[string]*Review            `json:"reviews"`
+	Reports       map[string]*Report            `json:"reports"`
+	Favorites     map[string]*Favorite          `json:"favorites"`
 }
 
 type Store struct {
@@ -34,6 +37,9 @@ type Store struct {
 	Orders        map[string]*Order
 	Conversations map[string]*Conversation
 	Messages      map[string]*Message
+	Reviews       map[string]*Review
+	Reports       map[string]*Report
+	Favorites     map[string]*Favorite
 }
 
 func NewStore() *Store {
@@ -47,6 +53,9 @@ func NewStore() *Store {
 		Orders:        map[string]*Order{},
 		Conversations: map[string]*Conversation{},
 		Messages:      map[string]*Message{},
+		Reviews:       map[string]*Review{},
+		Reports:       map[string]*Report{},
+		Favorites:     map[string]*Favorite{},
 	}
 	s.load()
 	if len(s.Categories) == 0 {
@@ -101,6 +110,15 @@ func (s *Store) load() {
 	if snap.Messages != nil {
 		s.Messages = snap.Messages
 	}
+	if snap.Reviews != nil {
+		s.Reviews = snap.Reviews
+	}
+	if snap.Reports != nil {
+		s.Reports = snap.Reports
+	}
+	if snap.Favorites != nil {
+		s.Favorites = snap.Favorites
+	}
 }
 
 // save must be called with s.mu held (or right after a write while still holding it).
@@ -115,6 +133,9 @@ func (s *Store) save() {
 		Orders:        s.Orders,
 		Conversations: s.Conversations,
 		Messages:      s.Messages,
+		Reviews:       s.Reviews,
+		Reports:       s.Reports,
+		Favorites:     s.Favorites,
 	}
 	b, err := json.MarshalIndent(snap, "", "  ")
 	if err != nil {

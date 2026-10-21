@@ -1,0 +1,39 @@
+{{define "admin_orders.html"}}
+{{template "layout_top" .}}
+
+<h2>All orders</h2>
+<div class="stats">
+  <div class="stat"><strong>{{.Money.PaidOrders}}</strong>Paid orders</div>
+  <div class="stat"><strong>{{naira .Money.GrossKobo}}</strong>Total sales</div>
+  <div class="stat"><strong>{{naira .Money.CommissionKobo}}</strong>Kaya commission (estimate)</div>
+  <div class="stat"><strong>{{naira .Money.PayoutKobo}}</strong>Seller share</div>
+</div>
+<p class="muted">Commission is calculated from each order at checkout; Flutterwave's own settlement report is the final record.</p>
+
+<p>
+  {{if .OnlyAttention}}<a href="/admin/orders" class="btn secondary">Show all orders</a>
+  {{else}}<a href="/admin/orders?attention=1" class="btn secondary">Only orders needing attention</a>{{end}}
+</p>
+
+{{if not .Rows}}<p class="muted">No orders to show.</p>{{end}}
+<div style="overflow-x:auto;">
+<table>
+  <tr><th>Date</th><th>Buyer</th><th>Seller</th><th>Items</th><th>Total</th><th>Status</th></tr>
+  {{range .Rows}}{{$o := .Order}}
+  <tr>
+    <td>{{$o.CreatedAt.Format "Jan 2, 3:04 PM"}}</td>
+    <td>{{.BuyerName}}</td>
+    <td>{{.SellerName}}</td>
+    <td>{{range $o.Items}}{{.Title}} &times;{{.Quantity}}<br>{{end}}</td>
+    <td>{{naira $o.TotalKobo}}</td>
+    <td>
+      {{if $o.IsPaid}}<span class="tag tag-ok">{{$o.Status}}</span>{{else}}<span class="tag">{{$o.Status}}</span>{{end}}
+      {{if $o.OversoldWarning}}<br><span class="tag tag-warn">Needs attention</span><br><span class="muted">{{$o.OversoldWarning}}</span>{{end}}
+    </td>
+  </tr>
+  {{end}}
+</table>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

@@ -1,0 +1,43 @@
+{{define "seller_listing_edit.html"}}
+{{template "layout_top" .}}
+
+<div class="card" style="max-width:560px;">
+  <h2>Edit listing</h2>
+  {{if .Error}}<div class="error">{{.Error}}</div>{{end}}
+  <form method="post" action="/seller/listings/edit" enctype="multipart/form-data">
+    <input type="hidden" name="id" value="{{.Listing.ID}}">
+    <label for="title">Title</label>
+    <input type="text" id="title" name="title" value="{{.Listing.Title}}" required maxlength="120">
+    <label for="description">Description</label>
+    <textarea id="description" name="description" rows="4" maxlength="2000">{{.Listing.Description}}</textarea>
+    <label for="category_id">Category</label>
+    <select id="category_id" name="category_id" required>
+      {{range .Categories}}<option value="{{.ID}}" {{if eq .ID $.Listing.CategoryID}}selected{{end}}>{{.Name}}</option>{{end}}
+    </select>
+    <label for="price">Price (₦)</label>
+    <input type="number" id="price" name="price" step="0.01" min="0.01" value="{{printf "%.2f" (divkobo .Listing.PriceKobo)}}" required>
+    <label for="stock">Stock</label>
+    <input type="number" id="stock" name="stock" min="0" value="{{.Listing.Stock}}" required>
+    <p class="muted" style="margin-top:-6px;">Raising stock from 0 puts a sold-out item back on the market.</p>
+
+    {{if .Images}}
+    <label>Current photos <span class="muted">(tick to remove)</span></label>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin:8px 0 14px;">
+      {{range .Images}}
+      <label style="font-weight:400;text-align:center;">
+        <img src="/uploads/listings/{{.}}" alt="" style="width:80px;height:80px;object-fit:cover;border-radius:4px;display:block;border:1px solid var(--border);">
+        <input type="checkbox" name="remove_image" value="{{.}}"> remove
+      </label>
+      {{end}}
+    </div>
+    {{end}}
+    <label for="images">Add photos <span class="muted">(up to {{.MaxImages}} in total)</span></label>
+    <input type="file" id="images" name="images" accept="image/jpeg,image/png,image/gif,image/webp" multiple>
+
+    <button type="submit">Save changes</button>
+    <a href="/seller/listings" class="btn secondary">Cancel</a>
+  </form>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

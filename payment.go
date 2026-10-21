@@ -208,7 +208,7 @@ func (a *App) applyVerifiedTransaction(verify *flwVerifyResponse) error {
 		a.store.mu.Unlock()
 		return fmt.Errorf("no matching order for tx_ref %s", verify.Data.TxRef)
 	}
-	if order.Status == "paid" {
+	if order.IsPaid() {
 		a.store.mu.Unlock()
 		return nil // already confirmed - e.g. webhook arrived after the redirect already handled it
 	}
@@ -243,7 +243,7 @@ func (a *App) applyVerifiedTransaction(verify *flwVerifyResponse) error {
 func (a *App) finalizeOrderPaid(order *Order, paymentRef string) {
 	a.store.mu.Lock()
 
-	if order.Status == "paid" {
+	if order.IsPaid() {
 		a.store.mu.Unlock()
 		return
 	}
@@ -327,7 +327,7 @@ func (a *App) markOrderFailed(orderID string) {
 	defer a.store.mu.Unlock()
 
 	order, ok := a.store.Orders[orderID]
-	if !ok || order.Status == "paid" || order.Status == "payment_failed" {
+	if !ok || order.IsPaid() || order.Status == "payment_failed" {
 		return
 	}
 	order.Status = "payment_failed"

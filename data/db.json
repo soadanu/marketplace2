@@ -10,6 +10,11 @@
       "seller_status": "rejected",
       "created_at": "0001-01-01T00:00:00Z",
       "terms_accepted_at": "0001-01-01T00:00:00Z",
+      "suspended": false,
+      "ship_name": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
       "bank_code": "",
       "bank_name": "",
       "bank_account_number": "",
@@ -26,6 +31,11 @@
       "seller_status": "approved",
       "created_at": "2026-09-07T11:57:51.765936398+01:00",
       "terms_accepted_at": "0001-01-01T00:00:00Z",
+      "suspended": false,
+      "ship_name": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
       "bank_code": "",
       "bank_name": "",
       "bank_account_number": "",
@@ -34,10 +44,10 @@
     }
   },
   "sessions": {
-    "0ddec784dd03d2e791a1d907c031f272575012445e9dddb5a74689c8cca9cb6e": {
-      "token": "0ddec784dd03d2e791a1d907c031f272575012445e9dddb5a74689c8cca9cb6e",
+    "79cee452765a962bdf1c2f71e9600176368bc3c879207626fb36b5aeeeed59a1": {
+      "token": "79cee452765a962bdf1c2f71e9600176368bc3c879207626fb36b5aeeeed59a1",
       "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
-      "expires_at": "2026-09-17T08:54:34.208718968+01:00"
+      "expires_at": "2026-10-28T08:34:52.876092167+01:00"
     }
   },
   "resets": {
@@ -144,7 +154,14 @@
           "price_kobo": 9000000
         }
       ],
-      "created_at": "2026-09-07T17:13:06.813156103+01:00"
+      "created_at": "2026-09-07T17:13:06.813156103+01:00",
+      "ship_name": "",
+      "ship_phone": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
+      "shipped_at": "0001-01-01T00:00:00Z",
+      "delivered_at": "0001-01-01T00:00:00Z"
     },
     "bc5f22d281a0bafdfa9c716c1dd0b774": {
       "id": "bc5f22d281a0bafdfa9c716c1dd0b774",
@@ -165,7 +182,14 @@
           "price_kobo": 3000000
         }
       ],
-      "created_at": "2026-09-07T20:29:54.656329943+01:00"
+      "created_at": "2026-09-07T20:29:54.656329943+01:00",
+      "ship_name": "",
+      "ship_phone": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
+      "shipped_at": "0001-01-01T00:00:00Z",
+      "delivered_at": "0001-01-01T00:00:00Z"
     },
     "dc2f4444d9e276758f968ec670dfee13": {
       "id": "dc2f4444d9e276758f968ec670dfee13",
@@ -186,7 +210,14 @@
           "price_kobo": 3000000
         }
       ],
-      "created_at": "2026-09-07T20:29:38.878561901+01:00"
+      "created_at": "2026-09-07T20:29:38.878561901+01:00",
+      "ship_name": "",
+      "ship_phone": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
+      "shipped_at": "0001-01-01T00:00:00Z",
+      "delivered_at": "0001-01-01T00:00:00Z"
     }
   },
   "conversations": {
@@ -195,8 +226,13 @@
       "buyer_id": "2e3177c399d5e22f9976f4157d8d834d",
       "seller_id": "support",
       "listing_id": "",
-      "created_at": "2026-09-10T08:54:21.253871898+01:00"
+      "created_at": "2026-09-10T08:54:21.253871898+01:00",
+      "buyer_read_at": "0001-01-01T00:00:00Z",
+      "seller_read_at": "0001-01-01T00:00:00Z"
     }
   },
-  "messages": {}
+  "messages": {},
+  "reviews": {},
+  "reports": {},
+  "favorites": {}
 }

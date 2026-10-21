@@ -1,0 +1,30 @@
+{{define "shop.html"}}
+{{template "layout_top" .}}
+
+<h2 style="margin-bottom:4px;">{{.SellerName}}</h2>
+<p class="muted">
+  {{if .Count}}<span style="color:var(--warn);font-size:15px;">{{avgstars .Avg}}</span> {{avg .Avg}} from {{.Count}} review{{if ne .Count 1}}s{{end}}{{else}}No reviews yet{{end}}
+  &middot; Selling on Kaya since {{.Since.Format "January 2006"}}
+  &middot; <a href="/report?seller_id={{.SellerID}}">Report this seller</a>
+</p>
+
+<h3>Items for sale</h3>
+{{if .Listings}}
+<div class="stall-grid">{{range .Listings}}{{template "listing_card" .}}{{end}}</div>
+{{else}}
+<p class="muted">Nothing for sale right now.</p>
+{{end}}
+
+<h3 style="margin-top:32px;">Reviews</h3>
+{{if not .Reviews}}<p class="muted">Buyers can review a seller after their order is delivered.</p>{{end}}
+{{range .Reviews}}
+<div class="card" style="margin-top:12px;">
+  <span style="color:var(--warn);">{{stars .Rating}}</span>
+  <strong>{{.Name}}</strong> <span class="muted">{{.Date.Format "Jan 2, 2006"}}</span>
+  {{if .Comment}}<p style="margin:6px 0 0;">{{.Comment}}</p>{{end}}
+</div>
+{{end}}
+
+{{template "listing_card_styles"}}
+{{template "layout_bottom" .}}
+{{end}}

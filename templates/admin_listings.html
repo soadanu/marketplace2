@@ -1,0 +1,34 @@
+{{define "admin_listings.html"}}
+{{template "layout_top" .}}
+
+<h2>Listings</h2>
+<p class="muted">Remove anything that breaks the rules. A removed listing disappears from the market straight away and can be restored.</p>
+{{if not .Rows}}<p class="muted">No listings yet.</p>{{end}}
+<div style="overflow-x:auto;">
+<table>
+  <tr><th>Item</th><th>Seller</th><th>Price</th><th>Stock</th><th>Status</th><th></th></tr>
+  {{range .Rows}}{{$l := .Listing}}
+  <tr>
+    <td>{{if ne $l.Status "removed"}}<a href="/listing?id={{$l.ID}}">{{$l.Title}}</a>{{else}}{{$l.Title}}{{end}}</td>
+    <td><a href="/shop?id={{$l.SellerID}}">{{.SellerName}}</a></td>
+    <td>{{naira $l.PriceKobo}}</td>
+    <td>{{$l.Stock}}</td>
+    <td>{{if eq $l.Status "removed"}}<span class="tag tag-warn">removed</span>{{else if eq $l.Status "active"}}<span class="tag tag-ok">active</span>{{else}}<span class="tag">{{$l.Status}}</span>{{end}}</td>
+    <td>
+      <form class="inline" method="post" action="/admin/listings/status">
+        <input type="hidden" name="id" value="{{$l.ID}}">
+        <input type="hidden" name="next" value="/admin/listings">
+        {{if eq $l.Status "removed"}}
+          <input type="hidden" name="action" value="restore"><button type="submit" class="secondary">Restore</button>
+        {{else}}
+          <input type="hidden" name="action" value="remove"><button type="submit" class="danger">Remove</button>
+        {{end}}
+      </form>
+    </td>
+  </tr>
+  {{end}}
+</table>
+</div>
+
+{{template "layout_bottom" .}}
+{{end}}

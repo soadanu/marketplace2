@@ -9,7 +9,7 @@
 <div style="display:flex;flex-direction:column;gap:10px;">
   {{range .Conversations}}
   <a href="/chat/view?id={{.Conversation.ID}}" class="card" style="display:block;text-decoration:none;color:var(--ink);margin-top:0;">
-    <strong>{{if .IsSupport}}Kaya Support{{else}}{{.OtherName}}{{end}}</strong>
+    <strong>{{if .IsSupport}}Kaya Support{{else}}{{.OtherName}}{{end}}</strong>{{if .Unread}} <span class="badge">New</span>{{end}}
     <p class="muted" style="margin:4px 0 0;">{{if .LastMessage}}{{.LastMessage}}{{else}}No messages yet{{end}}</p>
   </a>
   {{end}}

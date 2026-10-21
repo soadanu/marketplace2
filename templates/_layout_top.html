@@ -183,8 +183,23 @@
     [data-theme="dark"] .theme-toggle .icon-sun { display: block; }
     [data-theme="dark"] .theme-toggle .icon-moon { display: none; }
 
+    .badge { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--gold);
+      color: var(--indigo-deep); font-size: 11px; font-weight: 700; text-align: center; line-height: 18px; margin-left: 6px; }
+    .badge[hidden] { display: none; }
+    .pager { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 28px 0 8px; }
+    .filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-bottom: 22px; }
+    .filters label { display: block; }
+    .filters input, .filters select { margin: 4px 0 0; width: auto; min-width: 120px; }
+    .filters button { margin-bottom: 0; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0; }
+    .stat { background: var(--surface); border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 3px var(--shadow); font-size: 13px; color: var(--muted); }
+    .stat strong { display: block; font-size: 20px; color: var(--heading); margin-bottom: 2px; }
+    .tag { display: inline-block; padding: 2px 9px; border-radius: 10px; font-size: 12px; font-weight: 600; background: var(--divider); color: var(--ink); }
+    .tag-ok { background: var(--info-bg); color: var(--info-text); }
+    .tag-warn { background: var(--err-bg); color: var(--err-text); }
+    .admin-nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 18px; }
     .site-footer { text-align: center; padding: 8px 24px 32px; font-size: 13px; color: var(--muted); }
-    .site-footer a { color: var(--muted); }
+    .site-footer a { color: var(--muted); margin: 0 8px; }
   </style>
 </head>
 <body>
@@ -194,15 +209,18 @@
     <nav>
       <a href="/">Home</a>
       <details class="nav-dropdown">
-        <summary>Menu</summary>
+        <summary>Menu <span class="badge" id="menu-badge" hidden></span></summary>
         <div class="dropdown-panel">
-          <a href="/cart">Cart</a>
+          <a href="/cart">Cart <span class="badge" id="cart-count" hidden></span></a>
           {{if .User}}
             <a href="/orders">My Orders</a>
-            <a href="/inbox">Messages</a>
+            <a href="/favorites">Saved items</a>
+            <a href="/inbox">Messages <span class="badge" id="unread-count" hidden></span></a>
+            <a href="/account">My account</a>
             <div class="divider"></div>
             {{if eq .User.SellerStatus "approved"}}
               <a href="/seller/listings">Seller Dashboard</a>
+              <a href="/seller/orders">My Sales</a>
               <a href="/seller/payout">Payout Account</a>
             {{else}}
               <a href="/seller/apply">Become a Seller</a>
@@ -210,7 +228,11 @@
             {{if eq .User.Role "admin"}}
               <div class="divider"></div>
               <a href="/admin">Admin</a>
+              <a href="/admin/orders">All Orders</a>
+              <a href="/admin/listings">Listings</a>
               <a href="/admin/sellers">Sellers</a>
+              <a href="/admin/users">Users</a>
+              <a href="/admin/reports">Reports</a>
               <a href="/admin/support">Support Inbox</a>
             {{end}}
             <div class="divider"></div>

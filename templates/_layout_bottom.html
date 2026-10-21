@@ -1,6 +1,6 @@
 {{define "layout_bottom"}}
 </main>
-<footer class="site-footer"><a href="/terms">Terms and Conditions</a></footer>
+<footer class="site-footer"><a href="/terms">Terms and Conditions</a><a href="/privacy">Privacy Policy</a></footer>
 <script>
   // Close any open nav dropdown when clicking outside it - <details>
   // doesn't do this natively.
@@ -30,6 +30,29 @@
       label();
     });
     label();
+  })();
+
+  // Little badges in the menu: items in the cart, chats with something new.
+  (function () {
+    function setBadge(id, n) {
+      var el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = n > 99 ? '99+' : String(n);
+      el.hidden = n <= 0;
+    }
+    function load() {
+      fetch('/api/counts', { credentials: 'same-origin' })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          if (!d) return;
+          setBadge('cart-count', d.cart || 0);
+          setBadge('unread-count', d.unread || 0);
+          setBadge('menu-badge', d.unread || 0);
+        })
+        .catch(function () {});
+    }
+    load();
+    setInterval(function () { if (!document.hidden) load(); }, 30000);
   })();
 
   // Show/hide button on every password field.

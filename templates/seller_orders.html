@@ -1,0 +1,50 @@
+{{define "seller_orders.html"}}
+{{template "layout_top" .}}
+
+<h2>My sales</h2>
+<div class="stats">
+  <div class="stat"><strong>{{.Stats.Sales}}</strong>Paid orders</div>
+  <div class="stat"><strong>{{.Stats.ToShip}}</strong>Waiting to ship</div>
+  <div class="stat"><strong>{{naira .Stats.EarnedKobo}}</strong>Your share of sales</div>
+</div>
+
+{{if not .Orders}}
+  <p class="muted">No paid orders yet. When a buyer pays, the order shows up here with their delivery address.</p>
+{{end}}
+
+{{range .Orders}}{{$o := .Order}}
+<div class="card">
+  <div class="muted">
+    {{$o.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot;
+    {{if eq $o.Status "paid"}}<span class="tag tag-warn">Ship this order</span>
+    {{else if eq $o.Status "shipped"}}<span class="tag">Shipped</span>
+    {{else}}<span class="tag tag-ok">Delivered</span>{{end}}
+  </div>
+  <ul>
+    {{range $o.Items}}<li>{{.Title}} &times; {{.Quantity}} &mdash; {{naira .PriceKobo}} each</li>{{end}}
+  </ul>
+  <p><strong>{{naira $o.TotalKobo}}</strong> <span class="muted">&middot; you receive {{naira $o.SellerPayoutKobo}}</span></p>
+
+  {{if $o.ShipAddress}}
+  <p><strong>Deliver to:</strong> {{$o.ShipName}}, {{$o.ShipPhone}}<br>
+     {{$o.ShipAddress}}, {{$o.ShipCity}}, {{$o.ShipState}}</p>
+  {{else}}
+  <p class="muted">This order was placed before delivery details were collected. Ask {{.BuyerName}} for their address.</p>
+  {{end}}
+
+  {{if eq $o.Status "paid"}}
+  <form method="post" action="/seller/orders/ship" style="display:flex;gap:8px;flex-wrap:wrap;">
+    <input type="hidden" name="id" value="{{$o.ID}}">
+    <input type="text" name="note" maxlength="200" placeholder="Courier or waybill note (optional)" style="margin:0;flex:1;min-width:200px;">
+    <button type="submit">Mark as shipped</button>
+  </form>
+  {{else if eq $o.Status "shipped"}}
+  <p class="muted">Shipped {{$o.ShippedAt.Format "Jan 2, 3:04 PM"}}{{if $o.TrackingNote}} &middot; {{$o.TrackingNote}}{{end}}. Waiting for the buyer to confirm it arrived.</p>
+  {{else}}
+  <p class="muted">Delivered {{$o.DeliveredAt.Format "Jan 2, 2006"}}.</p>
+  {{end}}
+</div>
+{{end}}
+
+{{template "layout_bottom" .}}
+{{end}}

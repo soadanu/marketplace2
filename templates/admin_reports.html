@@ -1,0 +1,41 @@
+{{define "admin_reports.html"}}
+{{template "layout_top" .}}
+
+<h2>Reports</h2>
+{{if not .Rows}}<p class="muted">No reports. Nobody has flagged anything.</p>{{end}}
+{{range .Rows}}{{$rep := .Report}}
+<div class="card">
+  <div class="muted">
+    {{$rep.CreatedAt.Format "Jan 2, 2006 3:04 PM"}} &middot; reported by {{.ReporterName}} &middot;
+    {{if eq $rep.Status "open"}}<span class="tag tag-warn">open</span>{{else}}<span class="tag tag-ok">resolved</span>{{end}}
+  </div>
+  <p><strong>{{$rep.Reason}}</strong></p>
+  {{if $rep.Details}}<p>{{$rep.Details}}</p>{{end}}
+  <p class="muted">
+    {{if $rep.ListingID}}Listing: {{if ne .ListingState "removed"}}<a href="/listing?id={{$rep.ListingID}}">{{.ListingTitle}}</a>{{else}}{{.ListingTitle}} (removed){{end}} &middot; {{end}}
+    Seller: <a href="/shop?id={{$rep.SellerID}}">{{.SellerName}}</a>
+  </p>
+  {{if eq $rep.Status "open"}}
+  <div class="actions">
+    {{if and $rep.ListingID (ne .ListingState "removed")}}
+    <form class="inline" method="post" action="/admin/listings/status">
+      <input type="hidden" name="id" value="{{$rep.ListingID}}"><input type="hidden" name="action" value="remove">
+      <input type="hidden" name="next" value="/admin/reports">
+      <button type="submit" class="danger">Remove listing</button>
+    </form>
+    {{end}}
+    <form class="inline" method="post" action="/admin/users/suspend">
+      <input type="hidden" name="id" value="{{$rep.SellerID}}"><input type="hidden" name="action" value="suspend">
+      <button type="submit" class="danger">Suspend seller</button>
+    </form>
+    <form class="inline" method="post" action="/admin/reports/resolve">
+      <input type="hidden" name="id" value="{{$rep.ID}}">
+      <button type="submit" class="secondary">Mark resolved</button>
+    </form>
+  </div>
+  {{end}}
+</div>
+{{end}}
+
+{{template "layout_bottom" .}}
+{{end}}

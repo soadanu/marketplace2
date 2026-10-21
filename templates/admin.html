@@ -1,7 +1,26 @@
 {{define "admin.html"}}
 {{template "layout_top" .}}
 
-<p><a href="/admin/sellers" class="btn secondary">View all sellers</a></p>
+{{if .DefaultPassword}}
+<div class="error">
+  This admin account is still using the built-in default password. Anyone who knows it can take over the site.
+  <a href="/account">Change it now</a>.
+</div>
+{{end}}
+
+<div class="stats">
+  <div class="stat"><strong>{{.Counts.PendingApplications}}</strong>Seller applications waiting</div>
+  <div class="stat"><strong>{{.Counts.OpenReports}}</strong><a href="/admin/reports">Open reports</a></div>
+  <div class="stat"><strong>{{.Counts.NeedsAttention}}</strong><a href="/admin/orders?attention=1">Orders needing attention</a></div>
+</div>
+<div class="admin-nav">
+  <a href="/admin/orders" class="btn secondary">All orders</a>
+  <a href="/admin/listings" class="btn secondary">Listings</a>
+  <a href="/admin/sellers" class="btn secondary">Sellers</a>
+  <a href="/admin/users" class="btn secondary">Users</a>
+  <a href="/admin/reports" class="btn secondary">Reports</a>
+  <a href="/admin/support" class="btn secondary">Support inbox</a>
+</div>
 
 <h2>Pending seller applications</h2>
 {{if not .Applications}}<p class="muted">Nothing pending.</p>{{end}}
@@ -11,7 +30,7 @@
   {{$app := .}}
   <tr>
     <td>{{with index $.Applicants .UserID}}{{.Name}} ({{.Email}}){{end}}</td>
-    <td>{{.NIN}}</td>
+    <td>{{.NIN}}{{if .NINDocPath}}<br><a href="/admin/kyc?id={{.ID}}" target="_blank" rel="noopener">View ID photo</a>{{end}}</td>
     <td>{{if .AltIDType}}{{.AltIDType}}: {{.AltIDValue}}{{else}}—{{end}}</td>
     <td>{{.SubmittedAt.Format "Jan 2, 2006"}}</td>
     <td>

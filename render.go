@@ -1,10 +1,13 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"path/filepath"
+	"strings"
 )
 
 var templates *template.Template
@@ -13,6 +16,27 @@ func loadTemplates() {
 	funcs := template.FuncMap{
 		"naira": func(kobo int) string {
 			return formatNaira(kobo)
+		},
+		"stars": func(n int) string {
+			if n < 0 {
+				n = 0
+			}
+			if n > 5 {
+				n = 5
+			}
+			return strings.Repeat("★", n) + strings.Repeat("☆", 5-n)
+		},
+		"avg":     func(f float64) string { return fmt.Sprintf("%.1f", f) },
+		"divkobo": func(k int) float64 { return float64(k) / 100 },
+		"avgstars": func(f float64) string {
+			n := int(math.Round(f))
+			if n < 0 {
+				n = 0
+			}
+			if n > 5 {
+				n = 5
+			}
+			return strings.Repeat("★", n) + strings.Repeat("☆", 5-n)
 		},
 		"basename": func(path string) string {
 			if path == "" {

@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -12,15 +14,46 @@ import (
 	"time"
 )
 
-// handleHome shows all active listings, with optional category filter (?category=) and search (?q=).
+const homePageSize = 12
+
+// parseNairaParam reads a price filter typed in naira and returns kobo, or
+// -1 when it is empty or not a sensible amount.
+func parseNairaParam(s string) int {
+	f, err := strconv.ParseFloat(strings.TrimSpace(s), 64)
+	if err != nil || math.IsNaN(f) || f < 0 || f > 100000000 {
+		return -1
+	}
+	return int(math.Round(f * 100))
+}
+
+// handleHome shows active listings with search, category, price range,
+// sorting and paging (?q= &category= &min= &max= &sort= &page=).
 func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
-	catFilter := r.URL.Query().Get("category")
-	q := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("q")))
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	qp := r.URL.Query()
+	catFilter := qp.Get("category")
+	rawQ := strings.TrimSpace(qp.Get("q"))
+	q := strings.ToLower(rawQ)
+	sortBy := qp.Get("sort")
+	if sortBy != "price_asc" && sortBy != "price_desc" {
+		sortBy = "newest"
+	}
+	minKobo, maxKobo := parseNairaParam(qp.Get("min")), parseNairaParam(qp.Get("max"))
+	page, _ := strconv.Atoi(qp.Get("page"))
+	if page < 1 {
+		page = 1
+	}
 
 	a.store.mu.RLock()
 	listings := make([]*Listing, 0)
 	for _, l := range a.store.Listings {
 		if l.Status != "active" {
+			continue
+		}
+		if s, ok := a.store.Users[l.SellerID]; !ok || s.Suspended {
 			continue
 		}
 		if catFilter != "" && l.CategoryID != catFilter {
@@ -29,16 +62,89 @@ func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 		if q != "" && !strings.Contains(strings.ToLower(l.Title), q) && !strings.Contains(strings.ToLower(l.Description), q) {
 			continue
 		}
+		if (minKobo >= 0 && l.PriceKobo < minKobo) || (maxKobo >= 0 && l.PriceKobo > maxKobo) {
+			continue
+		}
 		listings = append(listings, l)
 	}
 	a.store.mu.RUnlock()
 
-	sort.Slice(listings, func(i, j int) bool { return listings[i].CreatedAt.After(listings[j].CreatedAt) })
+	sort.Slice(listings, func(i, j int) bool {
+		if listings[i].PriceKobo != listings[j].PriceKobo {
+			switch sortBy {
+			case "price_asc":
+				return listings[i].PriceKobo < listings[j].PriceKobo
+			case "price_desc":
+				return listings[i].PriceKobo > listings[j].PriceKobo
+			}
+		}
+		return listings[i].CreatedAt.After(listings[j].CreatedAt)
+	})
+
+	total := len(listings)
+	totalPages := (total + homePageSize - 1) / homePageSize
+	if totalPages < 1 {
+		totalPages = 1
+	}
+	if page > totalPages {
+		page = totalPages
+	}
+	start := (page - 1) * homePageSize
+	end := start + homePageSize
+	if end > total {
+		end = total
+	}
+
+	// Links for the pager keep every active filter.
+	base := url.Values{}
+	if rawQ != "" {
+		base.Set("q", rawQ)
+	}
+	if catFilter != "" {
+		base.Set("category", catFilter)
+	}
+	if sortBy != "newest" {
+		base.Set("sort", sortBy)
+	}
+	if minKobo >= 0 {
+		base.Set("min", qp.Get("min"))
+	}
+	if maxKobo >= 0 {
+		base.Set("max", qp.Get("max"))
+	}
+	pageURL := func(p int) string {
+		v := url.Values{}
+		for k, vs := range base {
+			v[k] = vs
+		}
+		if p > 1 {
+			v.Set("page", strconv.Itoa(p))
+		}
+		if enc := v.Encode(); enc != "" {
+			return "/?" + enc
+		}
+		return "/"
+	}
+	prev, next := "", ""
+	if page > 1 {
+		prev = pageURL(page - 1)
+	}
+	if page < totalPages {
+		next = pageURL(page + 1)
+	}
 
 	render(w, "home.html", map[string]any{
-		"Listings":   listings,
+		"Listings":   listings[start:end],
+		"Total":      total,
+		"Page":       page,
+		"TotalPages": totalPages,
+		"PrevURL":    prev,
+		"NextURL":    next,
+		"Sort":       sortBy,
+		"Min":        qp.Get("min"),
+		"Max":        qp.Get("max"),
 		"Categories": a.sortedCategories(),
-		"Query":      q,
+		"Query":      rawQ,
 		"CategoryID": catFilter,
 		"User":       a.currentUser(r),
 	})
@@ -54,15 +160,25 @@ func (a *App) handleListingDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	a.store.mu.RUnlock()
 
-	if !ok {
+	// Removed listings and suspended sellers' listings are gone for everyone.
+	if !ok || listing.Status == "removed" || seller == nil || seller.Suspended {
 		http.NotFound(w, r)
 		return
 	}
+	user := a.currentUser(r)
+	uid := ""
+	if user != nil {
+		uid = user.ID
+	}
+	avg, count := a.sellerRating(seller.ID)
 	render(w, "listing_detail.html", map[string]any{
 		"Listing":         listing,
 		"Seller":          seller,
-		"User":            a.currentUser(r),
-		"SellerCanBePaid": seller != nil && (!a.payments.Configured() || seller.FlutterwaveSubaccountID != ""),
+		"User":            user,
+		"SellerCanBePaid": !a.payments.Configured() || seller.FlutterwaveSubaccountID != "",
+		"Avg":             avg,
+		"RatingCount":     count,
+		"IsFavorite":      a.isFavorite(uid, listing.ID),
 	})
 }
 
@@ -93,34 +209,31 @@ func (a *App) handleSellerListingCreate(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "form too large or malformed", http.StatusBadRequest)
 		return
 	}
-
-	title := strings.TrimSpace(r.FormValue("title"))
-	desc := strings.TrimSpace(r.FormValue("description"))
-	categoryID := r.FormValue("category_id")
-	priceNaira, err1 := strconv.ParseFloat(r.FormValue("price"), 64)
-	stock, err2 := strconv.Atoi(r.FormValue("stock"))
-
-	if title == "" || categoryID == "" || err1 != nil || priceNaira <= 0 || err2 != nil || stock < 0 {
-		http.Error(w, "invalid listing details", http.StatusBadRequest)
+	f, msg := a.parseListingForm(r)
+	if msg != "" {
+		http.Error(w, msg, http.StatusBadRequest)
 		return
 	}
-
 	imagePaths, err := saveUploadedFiles(r, "images", dataPath("uploads", "listings"), maxListingImages)
 	if err != nil {
 		http.Error(w, "could not save images: "+err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	status := "active"
+	if f.Stock == 0 {
+		status = "sold_out"
+	}
 	listing := &Listing{
 		ID:          newID(),
 		SellerID:    seller.ID,
-		CategoryID:  categoryID,
-		Title:       title,
-		Description: desc,
-		PriceKobo:   int(priceNaira * 100),
-		Stock:       stock,
+		CategoryID:  f.CategoryID,
+		Title:       f.Title,
+		Description: f.Description,
+		PriceKobo:   f.PriceKobo,
+		Stock:       f.Stock,
 		ImagePaths:  imagePaths,
-		Status:      "active",
+		Status:      status,
 		CreatedAt:   time.Now(),
 	}
 
@@ -175,13 +288,13 @@ func saveUploadedFiles(r *http.Request, field, dir string, maxCount int) ([]stri
 		buf := make([]byte, 512)
 		n, _ := file.Read(buf)
 		contentType := http.DetectContentType(buf[:n])
-		if !strings.HasPrefix(contentType, "image/") {
+		ext, isImage := imageExt(contentType)
+		if !isImage {
 			file.Close()
-			return nil, fmt.Errorf("%s is not an image (detected %s)", header.Filename, contentType)
+			return nil, fmt.Errorf("%s is not a JPG, PNG, GIF or WebP image", header.Filename)
 		}
 		file.Seek(0, io.SeekStart)
 
-		ext := filepath.Ext(header.Filename)
 		name := newID() + ext
 		fullPath := filepath.Join(dir, name)
 
@@ -205,7 +318,7 @@ func saveUploadedFiles(r *http.Request, field, dir string, maxCount int) ([]stri
 // and writes it under dir with a random name. Returns "" if the field was
 // empty. Still used for single-file uploads like the KYC document.
 func saveUploadedFile(r *http.Request, field, dir string) (string, error) {
-	file, header, err := r.FormFile(field)
+	file, _, err := r.FormFile(field)
 	if err != nil {
 		return "", err
 	}
@@ -214,15 +327,15 @@ func saveUploadedFile(r *http.Request, field, dir string) (string, error) {
 	buf := make([]byte, 512)
 	n, _ := file.Read(buf)
 	contentType := http.DetectContentType(buf[:n])
-	if !strings.HasPrefix(contentType, "image/") {
-		return "", fmt.Errorf("uploaded file is not an image (detected %s)", contentType)
+	ext, isImage := imageExt(contentType)
+	if !isImage {
+		return "", fmt.Errorf("the file must be a JPG, PNG, GIF or WebP image")
 	}
 	file.Seek(0, io.SeekStart)
 
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
-	ext := filepath.Ext(header.Filename)
 	name := newID() + ext
 	fullPath := filepath.Join(dir, name)
 
@@ -235,4 +348,20 @@ func saveUploadedFile(r *http.Request, field, dir string) (string, error) {
 		return "", err
 	}
 	return fullPath, nil
+}
+
+// imageExt maps a sniffed content type to the file extension we store it
+// under. Only these four are accepted.
+func imageExt(contentType string) (string, bool) {
+	switch contentType {
+	case "image/jpeg":
+		return ".jpg", true
+	case "image/png":
+		return ".png", true
+	case "image/gif":
+		return ".gif", true
+	case "image/webp":
+		return ".webp", true
+	}
+	return "", false
 }
