@@ -22,6 +22,22 @@
   <a href="/admin/support" class="btn secondary">Support inbox</a>
 </div>
 
+<div class="card" style="max-width:680px;margin-bottom:24px;">
+  <h3 style="margin-top:0;">Email</h3>
+  {{if eq .EmailMode "none"}}
+    <div class="error">Email isn't set up. Password reset links and order updates are only written to the server log - customers never receive them. Set <code>BREVO_API_KEY</code> and <code>EMAIL_FROM</code> on your host, then redeploy.</div>
+  {{else}}
+    <div class="info">Email is set up and sending through {{if eq .EmailMode "brevo"}}Brevo{{else}}SMTP{{end}}.</div>
+  {{end}}
+  <form method="post" action="/admin/email-test" style="display:flex;gap:8px;flex-wrap:wrap;">
+    <input type="email" name="to" required placeholder="Send a test email to..." style="margin:0;flex:1;min-width:220px;">
+    <button type="submit" class="secondary">Send test email</button>
+  </form>
+  {{with .EmailTest}}
+    <p class="{{if .OK}}info{{else}}error{{end}}" style="margin:12px 0 0;">{{.Msg}} <span class="muted">({{.At.Format "3:04 PM"}})</span></p>
+  {{end}}
+</div>
+
 <h2>Pending seller applications</h2>
 {{if not .Applications}}<p class="muted">Nothing pending.</p>{{end}}
 <table>

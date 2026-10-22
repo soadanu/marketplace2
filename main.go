@@ -9,10 +9,11 @@ import (
 )
 
 type App struct {
-	store    *Store
-	payments PaymentConfig
-	email    EmailConfig
-	limits   *limits
+	store     *Store
+	payments  PaymentConfig
+	email     EmailConfig
+	limits    *limits
+	emailTest emailTestState
 }
 
 func main() {
@@ -32,8 +33,13 @@ func main() {
 		log.Println("FLW_SECRET_KEY / APP_BASE_URL not set - checkout will run in dev mode (orders marked paid immediately, no real payment taken)")
 	}
 
-	if !app.email.Configured() {
-		log.Println("SMTP_HOST / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM not set - emails (password reset, etc) will be logged to the console instead of actually sent")
+	switch app.email.Mode() {
+	case "none":
+		log.Println("Email is not set up (BREVO_API_KEY + EMAIL_FROM) - password reset links and order updates will only be written to this log, not emailed")
+	case "smtp":
+		if os.Getenv("RENDER") != "" {
+			log.Println("Email is sending over SMTP. Render's FREE plan blocks SMTP ports (25, 465, 587): if emails don't arrive, use BREVO_API_KEY + EMAIL_FROM instead, or move to a paid plan")
+		}
 	}
 
 	mux := http.NewServeMux()
@@ -95,6 +101,7 @@ func main() {
 	// Account
 	mux.HandleFunc("/account", app.requireLogin(methodSplitUser(app.handleAccountGet, app.handleAccountPost)))
 	mux.HandleFunc("/account/password", app.requireLogin(postOnly(app.handlePasswordChange)))
+	mux.HandleFunc("/account/email", app.requireLogin(postOnly(app.handleEmailChange)))
 
 	// Delivery, reviews, saved items, reports
 	mux.HandleFunc("/orders/received", app.requireLogin(postOnly(app.handleOrderReceived)))
@@ -117,6 +124,7 @@ func main() {
 	mux.HandleFunc("/admin/reports", app.requireAdmin(app.handleAdminReports))
 	mux.HandleFunc("/admin/reports/resolve", app.requireAdmin(postOnly(app.handleAdminReportResolve)))
 	mux.HandleFunc("/admin/kyc", app.requireAdmin(app.handleAdminKYC))
+	mux.HandleFunc("/admin/email-test", app.requireAdmin(postOnly(app.handleAdminEmailTest)))
 
 	// Uploaded listing images are served publicly; the KYC documents folder
 	// is deliberately NOT mounted here - keep those private.

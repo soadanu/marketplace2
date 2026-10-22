@@ -82,6 +82,8 @@ func (a *App) handleAdminDashboard(w http.ResponseWriter, r *http.Request, admin
 		"Applications":    pending,
 		"Applicants":      applicants,
 		"Counts":          a.adminCounts(),
+		"EmailMode":       a.email.Mode(),
+		"EmailTest":       a.emailTest.get(),
 		"DefaultPassword": a.hasDefaultPassword(admin),
 		"Categories":      a.sortedCategories(),
 		"User":            admin,

@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"net/mail"
 	"strings"
 	"time"
 )
@@ -21,6 +22,13 @@ func (a *App) handleRegisterPost(w http.ResponseWriter, r *http.Request) {
 
 	if name == "" || email == "" || len(password) < 6 {
 		render(w, "register.html", map[string]string{"Error": "Name, a valid email, and a password of at least 6 characters are required."})
+		return
+	}
+
+	// This address is where password resets and order updates go, so it has to
+	// be a proper email address.
+	if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {
+		render(w, "register.html", map[string]string{"Error": "Enter a valid email address - it's where password resets and order updates are sent."})
 		return
 	}
 

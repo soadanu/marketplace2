@@ -43,14 +43,14 @@
       "flutterwave_subaccount_id": ""
     }
   },
-  "sessions": {
-    "79cee452765a962bdf1c2f71e9600176368bc3c879207626fb36b5aeeeed59a1": {
-      "token": "79cee452765a962bdf1c2f71e9600176368bc3c879207626fb36b5aeeeed59a1",
-      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
-      "expires_at": "2026-10-28T08:34:52.876092167+01:00"
-    }
-  },
+  "sessions": {},
   "resets": {
+    "6fd0283a3f0d76f4776ffdfa93619e0c4cdaf332daa47d994ebf85ab1c4c6dff": {
+      "token": "6fd0283a3f0d76f4776ffdfa93619e0c4cdaf332daa47d994ebf85ab1c4c6dff",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "expires_at": "2026-10-22T10:32:36.447555311+01:00",
+      "used": false
+    },
     "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d": {
       "token": "a45df38901e86a5d7ed32917a4ac601f69002b3c4e43048df2246c9144e7c78d",
       "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
