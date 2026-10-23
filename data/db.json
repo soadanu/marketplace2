@@ -41,13 +41,34 @@
       "bank_account_number": "",
       "bank_account_name": "",
       "flutterwave_subaccount_id": ""
+    },
+    "a778f2bebec61359c822032819c70a82": {
+      "id": "a778f2bebec61359c822032819c70a82",
+      "name": "Adanu James",
+      "email": "sollyadanu@gmail.com",
+      "password_hash": "77bfa3a4a0d436308ecf75234f3176a3$b89ebf7384456e65073fadefebc87802b83dcfcdf79620f58071b6c2bbe88618",
+      "phone": "08032688861",
+      "role": "seller",
+      "seller_status": "approved",
+      "created_at": "2026-10-23T14:46:36.588656757+01:00",
+      "terms_accepted_at": "2026-10-23T14:46:36.588656757+01:00",
+      "suspended": false,
+      "ship_name": "",
+      "ship_address": "",
+      "ship_city": "",
+      "ship_state": "",
+      "bank_code": "",
+      "bank_name": "",
+      "bank_account_number": "",
+      "bank_account_name": "",
+      "flutterwave_subaccount_id": ""
     }
   },
   "sessions": {
-    "23b5357dd87878a884fa48b798922b606157c1fd06f1f7dffdceb35621e208fe": {
-      "token": "23b5357dd87878a884fa48b798922b606157c1fd06f1f7dffdceb35621e208fe",
+    "fad92fb8d7620f47be08a3a5f4c86e92c26ccb483eb1016b31c678d4d66e1e08": {
+      "token": "fad92fb8d7620f47be08a3a5f4c86e92c26ccb483eb1016b31c678d4d66e1e08",
       "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
-      "expires_at": "2026-10-30T14:24:53.217377961+01:00"
+      "expires_at": "2026-10-30T14:47:18.988737671+01:00"
     }
   },
   "resets": {
@@ -65,6 +86,17 @@
     }
   },
   "applications": {
+    "3f9cd5c8c2bee3da28026d2d3b62faa3": {
+      "id": "3f9cd5c8c2bee3da28026d2d3b62faa3",
+      "user_id": "a778f2bebec61359c822032819c70a82",
+      "nin": "58597589946",
+      "nin_doc_path": "data/uploads/kyc/60432ed4dd685ed692110409c5a77c94.png",
+      "alt_id_type": "",
+      "alt_id_value": "",
+      "status": "approved",
+      "submitted_at": "2026-10-23T14:46:52.05442477+01:00",
+      "reviewed_by": "2e3177c399d5e22f9976f4157d8d834d"
+    },
     "a6d2833670111173f32e64842a291b47": {
       "id": "a6d2833670111173f32e64842a291b47",
       "user_id": "2e3177c399d5e22f9976f4157d8d834d",
@@ -115,6 +147,20 @@
     }
   },
   "listings": {
+    "0b92bf95db6a0aa9d00dd3253658dd2a": {
+      "id": "0b92bf95db6a0aa9d00dd3253658dd2a",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "47641eb02631c7393eec939e0e108c4c",
+      "title": "phone",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 2,
+      "image_paths": [
+        "data/uploads/listings/2a95d55973300a5aec86a3460517f4b9.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:49:03.931924614+01:00"
+    },
     "448784de936f3910591455ec04cc744d": {
       "id": "448784de936f3910591455ec04cc744d",
       "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
@@ -127,6 +173,35 @@
       "status": "sold_out",
       "created_at": "2026-09-07T17:15:10.277977134+01:00"
     },
+    "513ccde64e4d4ec1b983e7df6d10721f": {
+      "id": "513ccde64e4d4ec1b983e7df6d10721f",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "47641eb02631c7393eec939e0e108c4c",
+      "title": "phone",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 12,
+      "image_paths": [
+        "data/uploads/listings/8c4d677533176c8e2c506d4218da4659.jpg",
+        "data/uploads/listings/00c921b1a21168701621b4811418f7a3.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:52:24.42839689+01:00"
+    },
+    "5890d038e652500b32bf99fd568a7dfc": {
+      "id": "5890d038e652500b32bf99fd568a7dfc",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "0a8111944b4278fe37280683cd450310",
+      "title": "clothes",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 4,
+      "image_paths": [
+        "data/uploads/listings/91c36daf2990bffa612dbddc34bd168f.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:51:40.407868388+01:00"
+    },
     "5aa90333b4da415d6e0e92269702cb17": {
       "id": "5aa90333b4da415d6e0e92269702cb17",
       "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
@@ -138,6 +213,20 @@
       "image_paths": null,
       "status": "sold_out",
       "created_at": "2026-09-07T17:12:09.818932091+01:00"
+    },
+    "c7312c48bc45c234d44095c4e5a7bd6f": {
+      "id": "c7312c48bc45c234d44095c4e5a7bd6f",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "0a8111944b4278fe37280683cd450310",
+      "title": "shoes",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 2,
+      "image_paths": [
+        "data/uploads/listings/767fafb70a6a7a16104d0ba987611964.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:52:49.303451877+01:00"
     },
     "cc656fa0f35e88e2218787e5dcf0ec82": {
       "id": "cc656fa0f35e88e2218787e5dcf0ec82",
@@ -152,6 +241,34 @@
       ],
       "status": "active",
       "created_at": "2026-10-23T14:25:32.775545328+01:00"
+    },
+    "d00336c6b99a310efb737104a6a85b65": {
+      "id": "d00336c6b99a310efb737104a6a85b65",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "0a8111944b4278fe37280683cd450310",
+      "title": "cloth",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 4,
+      "image_paths": [
+        "data/uploads/listings/a52b4046cf9ca5a7c357eb909a7d57a4.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:52:02.959350092+01:00"
+    },
+    "df3071c7ac625d93c2a7f5814a0faf26": {
+      "id": "df3071c7ac625d93c2a7f5814a0faf26",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "0a8111944b4278fe37280683cd450310",
+      "title": "shoes",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 3,
+      "image_paths": [
+        "data/uploads/listings/9fa80397ae1b984e07514af508ef0191.jpg"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:48:18.433425095+01:00"
     }
   },
   "orders": {
