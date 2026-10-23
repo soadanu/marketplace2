@@ -24,11 +24,13 @@
 
     <form method="post" action="/seller/payout">
       {{if .Banks}}
-        <label>Bank</label>
-        <select name="bank_code" id="bank_code" required onchange="document.getElementById('bank_name').value = this.options[this.selectedIndex].text">
-          <option value="">Select your bank</option>
-          {{range .Banks}}<option value="{{.Code}}">{{.Name}}</option>{{end}}
+        <label for="bank_search">Find your bank</label>
+        <input type="search" id="bank_search" placeholder="Type part of the name, e.g. Opay, Zenith, Kuda" autocomplete="off">
+        <label for="bank_code">Select your bank <span class="muted" id="bank_count"></span></label>
+        <select name="bank_code" id="bank_code" class="bank-list" size="7" required>
+          {{range .Banks}}<option value="{{.Code}}" {{if eq .Code $.SelectedBank}}selected{{end}}>{{.Name}}</option>{{end}}
         </select>
+        <p class="muted" id="bank_chosen" aria-live="polite" style="margin:-6px 0 12px;"></p>
         <input type="hidden" name="bank_name" id="bank_name">
       {{else}}
         <label>Bank code</label>
@@ -36,12 +38,132 @@
         <label>Bank name</label>
         <input type="text" name="bank_name" placeholder="e.g. Access Bank" required>
       {{end}}
-      <label>Account number</label>
-      <input type="text" name="account_number" required>
+      <label for="account_number">Account number</label>
+      <input type="text" id="account_number" name="account_number" value="{{.AccountNumber}}" required inputmode="numeric" pattern="[0-9]{10}" maxlength="10" title="Your 10-digit account number" autocomplete="off">
       <button type="submit">{{if .User.FlutterwaveSubaccountID}}Update payout account{{else}}Connect payout account{{end}}</button>
     </form>
   {{end}}
 </div>
+
+{{if .Banks}}
+<style>
+  .bank-list { cursor: pointer; }
+  .bank-list option { padding: 6px 8px; }
+</style>
+<script>
+  // Search box for the bank list: type any part of a name and the list
+  // narrows as you type. Short names people actually use (GTB, UBA, FCMB...)
+  // are matched too.
+  (function () {
+    var input = document.getElementById('bank_search');
+    var sel = document.getElementById('bank_code');
+    var nameField = document.getElementById('bank_name');
+    var chosen = document.getElementById('bank_chosen');
+    var count = document.getElementById('bank_count');
+    if (!input || !sel) return;
+
+    var aliases = [
+      ['guaranty trust', 'gtb gtbank gt'],
+      ['united bank for africa', 'uba'],
+      ['first bank', 'fbn firstbank'],
+      ['first city monument', 'fcmb'],
+      ['stanbic', 'ibtc'],
+      ['paycom', 'opay'],
+      ['opay', 'paycom']
+    ];
+    var all = [];
+    for (var i = 0; i < sel.options.length; i++) {
+      var o = sel.options[i];
+      all.push({ code: o.value, name: o.text, hay: '' });
+    }
+    function norm(s) {
+      s = s.toLowerCase();
+      var out = '';
+      for (var k = 0; k < s.length; k++) {
+        var c = s.charAt(k);
+        out += ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) ? c : ' ';
+      }
+      return out;
+    }
+    all.forEach(function (b) {
+      var n = norm(b.name);
+      var extra = '';
+      aliases.forEach(function (a) { if (n.indexOf(a[0]) !== -1) extra += ' ' + a[1]; });
+      b.hay = n + ' ' + extra;
+      b.start = n.trim();
+    });
+
+    var selectedCode = sel.value;
+
+    function describe() {
+      var o = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      if (o && o.value) {
+        selectedCode = o.value;
+        chosen.textContent = 'Selected: ' + o.text;
+      } else {
+        chosen.textContent = 'No bank selected yet.';
+      }
+    }
+
+    function render(list) {
+      sel.innerHTML = '';
+      list.forEach(function (b) {
+        var o = document.createElement('option');
+        o.value = b.code;
+        o.textContent = b.name;
+        if (b.code === selectedCode) o.selected = true;
+        sel.appendChild(o);
+      });
+      if (!list.length) {
+        var none = document.createElement('option');
+        none.disabled = true;
+        none.textContent = 'No bank matches that - check the spelling';
+        sel.appendChild(none);
+      }
+      count.textContent = '(' + list.length + (list.length === 1 ? ' bank)' : ' banks)');
+      describe();
+    }
+
+    function filter() {
+      var terms = norm(input.value).split(' ').filter(function (t) { return t.length > 0; });
+      var matches = all.filter(function (b) {
+        return terms.every(function (t) { return b.hay.indexOf(t) !== -1; });
+      });
+      if (terms.length) {
+        var first = terms[0];
+        matches.sort(function (a, b) {
+          var as = a.start.indexOf(first) === 0 ? 0 : 1;
+          var bs = b.start.indexOf(first) === 0 ? 0 : 1;
+          return as - bs;
+        });
+      }
+      if (matches.length === 1) selectedCode = matches[0].code; // only one left: pick it
+      render(matches);
+    }
+
+    input.addEventListener('input', filter);
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {            // don't submit the form from the search box
+        e.preventDefault();
+        if (sel.selectedIndex < 0 && sel.options.length && !sel.options[0].disabled) {
+          sel.selectedIndex = 0;
+          describe();
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        sel.focus();
+      }
+    });
+    sel.addEventListener('change', describe);
+    sel.form.addEventListener('submit', function () {
+      var o = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+      nameField.value = o ? o.text : '';   // the name always matches what is selected
+    });
+
+    render(all);
+  })();
+</script>
+{{end}}
 
 {{template "layout_bottom" .}}
 {{end}}

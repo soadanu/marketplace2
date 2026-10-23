@@ -191,6 +191,9 @@
     .filters label { display: block; }
     .filters input, .filters select { margin: 4px 0 0; width: auto; min-width: 120px; }
     .filters button { margin-bottom: 0; }
+    .item-cell { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+    .thumb { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex-shrink: 0; border: 1px solid var(--border); background: var(--paper); }
+    .thumb-fallback { display: inline-block; background: repeating-linear-gradient(45deg, var(--stripe-a), var(--stripe-a) 8px, var(--stripe-b) 8px, var(--stripe-b) 16px); }
     .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 18px 0; }
     .stat { background: var(--surface); border-radius: 6px; padding: 14px 16px; box-shadow: 0 1px 3px var(--shadow); font-size: 13px; color: var(--muted); }
     .stat strong { display: block; font-size: 20px; color: var(--heading); margin-bottom: 2px; }

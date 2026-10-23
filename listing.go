@@ -365,3 +365,11 @@ func imageExt(contentType string) (string, bool) {
 	}
 	return "", false
 }
+
+// listingCover is the file name of a listing's first photo, or "" if it has none.
+func listingCover(l *Listing) string {
+	if len(l.ImagePaths) == 0 {
+		return ""
+	}
+	return filepath.Base(l.ImagePaths[0])
+}

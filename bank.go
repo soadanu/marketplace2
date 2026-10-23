@@ -77,7 +77,7 @@ func (a *App) fetchNigerianBanks() ([]Bank, error) {
 		log.Printf("fetchNigerianBanks: Flutterwave status was %q, not success; body: %s", parsed.Status, truncateForLog(body))
 		return nil, fmt.Errorf("Flutterwave did not return a bank list")
 	}
-	sort.Slice(parsed.Data, func(i, j int) bool { return parsed.Data[i].Name < parsed.Data[j].Name })
+	sortBanks(parsed.Data)
 
 	bankCacheMu.Lock()
 	bankCache = parsed.Data
@@ -209,23 +209,42 @@ func (a *App) createFlutterwaveSubaccount(seller *User) (*flwSubaccountResponse,
 
 // --- HTTP handlers ---
 
-func (a *App) handleSellerPayoutGet(w http.ResponseWriter, r *http.Request, seller *User) {
+// sortBanks orders banks by name, ignoring upper/lower case, so "ALAT" and
+// "Access Bank" sit where a person expects them.
+func sortBanks(banks []Bank) {
+	sort.SliceStable(banks, func(i, j int) bool {
+		return strings.ToLower(banks[i].Name) < strings.ToLower(banks[j].Name)
+	})
+}
+
+// renderPayout draws the payout page. It always includes the bank list, even
+// after a mistake, so the seller keeps the search box and their choices
+// (selectedCode, accountNumber) instead of being dropped onto a bare form.
+func (a *App) renderPayout(w http.ResponseWriter, seller *User, info, errMsg, selectedCode, accountNumber string) {
+	live := a.payments.Configured()
 	var banks []Bank
-	var bankErr string
-	if a.payments.Configured() {
+	bankErr := ""
+	if live {
 		var err error
 		banks, err = a.fetchNigerianBanks()
 		if err != nil {
 			bankErr = "Could not load the bank list right now - you can still enter your bank's code manually if you know it."
 		}
 	}
-
 	render(w, "seller_payout.html", map[string]any{
 		"User":          seller,
 		"Banks":         banks,
 		"BankListError": bankErr,
-		"PaymentsLive":  a.payments.Configured(),
+		"PaymentsLive":  live,
+		"Info":          info,
+		"Error":         errMsg,
+		"SelectedBank":  selectedCode,
+		"AccountNumber": accountNumber,
 	})
+}
+
+func (a *App) handleSellerPayoutGet(w http.ResponseWriter, r *http.Request, seller *User) {
+	a.renderPayout(w, seller, "", "", "", "")
 }
 
 func (a *App) handleSellerPayoutPost(w http.ResponseWriter, r *http.Request, seller *User) {
@@ -234,11 +253,16 @@ func (a *App) handleSellerPayoutPost(w http.ResponseWriter, r *http.Request, sel
 		return
 	}
 
-	bankCode := r.FormValue("bank_code")
-	bankName := r.FormValue("bank_name")
-	accountNumber := r.FormValue("account_number")
-	if bankCode == "" || accountNumber == "" {
-		render(w, "seller_payout.html", map[string]any{"User": seller, "Error": "Bank and account number are required.", "PaymentsLive": true})
+	bankCode := strings.TrimSpace(r.FormValue("bank_code"))
+	bankName := strings.TrimSpace(r.FormValue("bank_name"))
+	accountNumber := strings.ReplaceAll(strings.TrimSpace(r.FormValue("account_number")), " ", "")
+	if bankCode == "" {
+		a.renderPayout(w, seller, "", "Choose your bank from the list. Use the search box to find it quickly.", bankCode, accountNumber)
+		return
+	}
+	// Nigerian bank account numbers (NUBAN) are exactly 10 digits.
+	if len(accountNumber) != 10 || strings.Trim(accountNumber, "0123456789") != "" {
+		a.renderPayout(w, seller, "", "Your account number must be exactly 10 digits.", bankCode, accountNumber)
 		return
 	}
 
@@ -260,25 +284,17 @@ func (a *App) handleSellerPayoutPost(w http.ResponseWriter, r *http.Request, sel
 			existingID, lookupErr := a.findExistingSubaccount(accountNumber)
 			if lookupErr != nil {
 				log.Printf("payout setup: subaccount already exists for %s but could not recover its ID: %v", accountNumber, lookupErr)
-				render(w, "seller_payout.html", map[string]any{
-					"User":         seller,
-					"Error":        "This bank account is already connected to a Kaya subaccount on Flutterwave, but we couldn't automatically recover it. Contact support rather than retrying.",
-					"PaymentsLive": true,
-				})
+				a.renderPayout(w, seller, "", "This bank account is already connected to a Kaya subaccount on Flutterwave, but we couldn't automatically recover it. Contact support rather than retrying.", bankCode, accountNumber)
 				return
 			}
 			a.store.mu.Lock()
 			seller.FlutterwaveSubaccountID = existingID
 			a.store.save()
 			a.store.mu.Unlock()
-			render(w, "seller_payout.html", map[string]any{
-				"User":         seller,
-				"Info":         "Payout account reconnected (it already existed from an earlier setup attempt).",
-				"PaymentsLive": true,
-			})
+			a.renderPayout(w, seller, "Payout account reconnected (it already existed from an earlier setup attempt).", "", "", "")
 			return
 		}
-		render(w, "seller_payout.html", map[string]any{"User": seller, "Error": "Could not set up payouts: " + err.Error(), "PaymentsLive": true})
+		a.renderPayout(w, seller, "", "Could not set up payouts: "+err.Error(), bankCode, accountNumber)
 		return
 	}
 
@@ -287,10 +303,5 @@ func (a *App) handleSellerPayoutPost(w http.ResponseWriter, r *http.Request, sel
 	seller.BankAccountName = result.Data.AccountName
 	a.store.save()
 	a.store.mu.Unlock()
-
-	render(w, "seller_payout.html", map[string]any{
-		"User":         seller,
-		"Info":         "Payout account connected. You'll now be paid automatically for every sale.",
-		"PaymentsLive": true,
-	})
+	a.renderPayout(w, seller, "Payout account connected. You'll now be paid automatically for every sale.", "", "", "")
 }

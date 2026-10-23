@@ -84,6 +84,7 @@ func (a *App) saveShippingToProfile(u *User, s shippingInfo) {
 
 type checkoutLine struct {
 	Title    string
+	Image    string // file name of the first photo, "" if none
 	Qty      int
 	Subtotal int
 }
@@ -112,7 +113,7 @@ func (a *App) renderCheckoutFromCart(w http.ResponseWriter, r *http.Request, buy
 		if !ok || l.Status != "active" {
 			continue
 		}
-		lines = append(lines, checkoutLine{Title: l.Title, Qty: qty, Subtotal: l.PriceKobo * qty})
+		lines = append(lines, checkoutLine{Title: l.Title, Image: listingCover(l), Qty: qty, Subtotal: l.PriceKobo * qty})
 		total += l.PriceKobo * qty
 	}
 	a.store.mu.RUnlock()
@@ -139,12 +140,12 @@ func (a *App) renderBuyNowPage(w http.ResponseWriter, r *http.Request, buyer *Us
 	a.store.mu.RLock()
 	l, ok := a.store.Listings[listingID]
 	var seller *User
-	var title string
+	var title, image string
 	var price, stock int
 	var status string
 	if ok {
 		seller = a.store.Users[l.SellerID]
-		title, price, stock, status = l.Title, l.PriceKobo, l.Stock, l.Status
+		title, image, price, stock, status = l.Title, listingCover(l), l.PriceKobo, l.Stock, l.Status
 	}
 	a.store.mu.RUnlock()
 
@@ -153,6 +154,6 @@ func (a *App) renderBuyNowPage(w http.ResponseWriter, r *http.Request, buyer *Us
 		http.Redirect(w, r, "/listing?id="+url.QueryEscape(listingID), http.StatusSeeOther)
 		return
 	}
-	lines := []checkoutLine{{Title: title, Qty: qty, Subtotal: price * qty}}
+	lines := []checkoutLine{{Title: title, Image: image, Qty: qty, Subtotal: price * qty}}
 	a.renderCheckout(w, buyer, "/buy-now", map[string]string{"listing_id": listingID, "qty": strconv.Itoa(qty)}, lines, price*qty, ship, msg)
 }

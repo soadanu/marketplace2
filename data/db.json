@@ -43,7 +43,13 @@
       "flutterwave_subaccount_id": ""
     }
   },
-  "sessions": {},
+  "sessions": {
+    "23b5357dd87878a884fa48b798922b606157c1fd06f1f7dffdceb35621e208fe": {
+      "token": "23b5357dd87878a884fa48b798922b606157c1fd06f1f7dffdceb35621e208fe",
+      "user_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "expires_at": "2026-10-30T14:24:53.217377961+01:00"
+    }
+  },
   "resets": {
     "6fd0283a3f0d76f4776ffdfa93619e0c4cdaf332daa47d994ebf85ab1c4c6dff": {
       "token": "6fd0283a3f0d76f4776ffdfa93619e0c4cdaf332daa47d994ebf85ab1c4c6dff",
@@ -132,6 +138,20 @@
       "image_paths": null,
       "status": "sold_out",
       "created_at": "2026-09-07T17:12:09.818932091+01:00"
+    },
+    "cc656fa0f35e88e2218787e5dcf0ec82": {
+      "id": "cc656fa0f35e88e2218787e5dcf0ec82",
+      "seller_id": "3bf5ff974bd5a8514890f667cfaba5e8",
+      "category_id": "47641eb02631c7393eec939e0e108c4c",
+      "title": "phone",
+      "description": "",
+      "price_kobo": 10000,
+      "stock": 1,
+      "image_paths": [
+        "data/uploads/listings/1cce3d0c4f774a0fa0752ef63cb2063d.png"
+      ],
+      "status": "active",
+      "created_at": "2026-10-23T14:25:32.775545328+01:00"
     }
   },
   "orders": {

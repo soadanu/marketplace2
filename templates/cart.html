@@ -8,11 +8,17 @@
 {{if not .Lines}}
   <p class="muted">Your cart is empty. <a href="/">Browse listings</a>.</p>
 {{else}}
+<div style="overflow-x:auto;">
 <table>
   <tr><th>Item</th><th>Qty</th><th>Subtotal</th><th></th></tr>
   {{range .Lines}}
   <tr>
-    <td>{{.Listing.Title}}</td>
+    <td>
+      <a href="/listing?id={{.Listing.ID}}" class="item-cell">
+        {{if .Listing.ImagePaths}}<img class="thumb" src="/uploads/listings/{{basename (index .Listing.ImagePaths 0)}}" alt="">{{else}}<span class="thumb thumb-fallback"></span>{{end}}
+        <span>{{.Listing.Title}}</span>
+      </a>
+    </td>
     <td>{{.Qty}}</td>
     <td>{{naira .Subtotal}}</td>
     <td>
@@ -24,6 +30,7 @@
   </tr>
   {{end}}
 </table>
+</div>
 <p style="text-align:right; font-size:18px;"><strong>Total: {{naira .Total}}</strong></p>
 <form method="get" action="/checkout" style="text-align:right;">
   <button type="submit">Checkout</button>
