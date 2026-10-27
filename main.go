@@ -48,7 +48,7 @@ func main() {
 	mux.HandleFunc("/", app.handleHome)
 	mux.HandleFunc("/listing", app.handleListingDetail)
 
-	// Auth
+	// Auth..............
 	mux.HandleFunc("/register", methodSplit(app.handleRegisterGet, app.handleRegisterPost))
 	mux.HandleFunc("/login", methodSplit(app.handleLoginGet, app.handleLoginPost))
 	mux.HandleFunc("/logout", app.handleLogout)
